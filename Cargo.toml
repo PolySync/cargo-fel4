@@ -1,0 +1,11 @@
+[package]
+name = "cargo-fel4"
+version = "0.0.1"
+publish = false
+
+[dependencies]
+docopt = "0.8"
+serde = "1.0"
+serde_derive = "1.0"
+cargo_metadata = "0.5"
+toml = "0.4"
