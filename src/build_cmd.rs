@@ -211,6 +211,10 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
                                     helios_target_specs_path.display()
                                 ),
                             )
+                            .env(
+                                "HELIOS_ARTIFACT_PATH",
+                                format!("{}", helios_artifact_path.display()),
+                            )
                             .arg("--target")
                             .arg(target_spec),
                     );
@@ -295,6 +299,10 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         )).env(
                 "RUST_TARGET_PATH",
                 format!("{}", helios_target_specs_path.display()),
+            )
+            .env(
+                "HELIOS_ARTIFACT_PATH",
+                format!("{}", helios_artifact_path.display()),
             )
             .arg("--target")
             .arg(target_spec),
