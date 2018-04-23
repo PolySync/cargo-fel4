@@ -6,6 +6,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::ErrorKind;
+use std::io;
 use std::process::Command;
 use toml::Value;
 
@@ -31,12 +32,20 @@ pub struct Config {
 
 pub enum Error {
     MetadataError(&'static str),
+    IO(String),
+}
+
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
+        Error::IO(format!("{}", e))
+    }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match self {
             Error::MetadataError(msg) => write!(f, "metadata error: {}", msg),
+            Error::IO(msg) => write!(f, "IO error: {}", msg),
         }
     }
 }

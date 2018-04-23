@@ -297,7 +297,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let kernel_path = helios_artifact_path.join("kernel");
 
     if !helios_artifact_path.exists() {
-        create_dir(&helios_artifact_path).unwrap();
+        create_dir(&helios_artifact_path)?;
     }
 
     // copy the image out of the Cargo workspace
