@@ -64,8 +64,6 @@ fn main() {
 
     println!("using workspace '{}'", config.md.workspace_root);
 
-    common::update_git_submodules(&config.md.workspace_root);
-
     if config.args.cmd_build {
         if let Err(e) = build_cmd::handle_build_cmd(&config) {
             println!("failure: {}", e)

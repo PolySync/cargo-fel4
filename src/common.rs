@@ -4,9 +4,9 @@ extern crate toml;
 use cargo_metadata::Metadata;
 use std::fmt;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::io::ErrorKind;
-use std::io;
 use std::process::Command;
 use toml::Value;
 
@@ -48,18 +48,6 @@ impl fmt::Display for Error {
             Error::IO(msg) => write!(f, "IO error: {}", msg),
         }
     }
-}
-
-pub fn update_git_submodules(cwd: &str) {
-    let mut cmd = Command::new("git");
-
-    run_cmd(
-        cmd.current_dir(cwd)
-            .arg("submodule")
-            .arg("update")
-            .arg("--init")
-            .arg("--recursive"),
-    );
 }
 
 pub fn read_manifest(path: &str) -> toml::Value {

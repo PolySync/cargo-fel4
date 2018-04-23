@@ -52,7 +52,12 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
                 ))
             }
         },
-        None => return Err(Error::MetadataError("missing root-task key")),
+        // TODO - here, if root-task is empty, then assume the current package
+        None => &String::from(
+            Path::new(&config.md.workspace_root)
+                .file_name()
+                .expect("failed to set default root-task project"),
+        ),
     };
     let helios_apps = match helios_table.get("apps") {
         Some(v) => match v {
@@ -300,6 +305,11 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         create_dir(&helios_artifact_path)?;
     }
 
+    println!(
+        "SRC {}/{}/{}/{}",
+        config.md.target_directory, target_spec, build_type, helios_root_task
+    );
+
     // copy the image out of the Cargo workspace
     copy(
         format!(
@@ -310,7 +320,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
             helios_root_task
         ),
         &sysimg_path,
-    ).unwrap();
+    )?;
 
     if !sysimg_path.exists() {
         common::fail(
