@@ -204,17 +204,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
                         cmd.current_dir(format!(
                             "{}/{}",
                             config.md.workspace_root, app_name
-                        )).env(
-                                "RUST_TARGET_PATH",
-                                format!(
-                                    "{}",
-                                    helios_target_specs_path.display()
-                                ),
-                            )
-                            .env(
-                                "HELIOS_ARTIFACT_PATH",
-                                format!("{}", helios_artifact_path.display()),
-                            )
+                        )).env("RUST_TARGET_PATH", &helios_target_specs_path)
+                            .env("HELIOS_ARTIFACT_PATH", &helios_artifact_path)
                             .arg("--target")
                             .arg(target_spec),
                     );
@@ -296,14 +287,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         cmd.current_dir(format!(
             "{}/{}",
             config.md.workspace_root, helios_root_task
-        )).env(
-                "RUST_TARGET_PATH",
-                format!("{}", helios_target_specs_path.display()),
-            )
-            .env(
-                "HELIOS_ARTIFACT_PATH",
-                format!("{}", helios_artifact_path.display()),
-            )
+        )).env("RUST_TARGET_PATH", &helios_target_specs_path)
+            .env("HELIOS_ARTIFACT_PATH", &helios_artifact_path)
             .arg("--target")
             .arg(target_spec),
     );
