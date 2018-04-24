@@ -72,7 +72,7 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
         .mf
         .lookup("package.metadata.helios.apps")?
     {
-        Value::Array(s) => Some(s),
+        Value::Array(s) => s,
         _ => return Err(Error::MetadataError("apps is malformed")),
     };
     let root_task = match config
@@ -90,15 +90,6 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
         _ => return Err(Error::MetadataError("build-cmd is malformed")),
     };
 
-    let helios_apps_array = match helios_apps {
-        Some(v) => v,
-        _ => {
-            return Err(Error::MetadataError(
-                "helios apps array is malformed",
-            ))
-        }
-    };
-
     let uses_root_config = match config
         .mf
         .lookup("package.metadata.sel4-cmake-options")?
@@ -107,13 +98,12 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
         _ => false,
     };
 
-    // TODO - error handling
     Ok(HeliosMetadata {
         root_task: root_task.to_string(),
-        apps: helios_apps_array
+        apps: helios_apps
             .iter()
+            .take_while(|x| x.as_str().is_some())
             .map(|x| x.as_str().unwrap().to_string())
-            //.map(|x| x.to_string())
             .collect::<Vec<_>>(),
         artifact_path: PathBuf::from(config.md.workspace_root.clone())
             .join(artifact_dir),
