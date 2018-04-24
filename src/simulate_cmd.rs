@@ -1,23 +1,28 @@
 extern crate cargo_metadata;
 extern crate toml;
 
-use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 
 use common;
 use common::Config;
 
-/// TODO
+/// TODO - need to use configs
 pub fn handle_simulate_cmd(config: &Config) {
-    let simulation_script_path = Path::new(&config.md.workspace_root)
-        .join("images")
-        .join("simulate");
+    let sim_script_rel_path: PathBuf = ["images", "simulate"].iter().collect();
 
-    if !simulation_script_path.exists() {
+    let workspace_root = PathBuf::from(&config.md.workspace_root);
+
+    if !workspace_root
+        .join("../")
+        .join(&sim_script_rel_path)
+        .exists()
+    {
         common::fail("something went wrong with the build, cannot find the simulation script");
     }
 
-    let mut cmd = Command::new(simulation_script_path);
-
-    common::run_cmd(cmd.current_dir(&config.md.workspace_root));
+    common::run_cmd(
+        Command::new(&sim_script_rel_path)
+            .current_dir(workspace_root.join("..")),
+    );
 }
