@@ -90,13 +90,10 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
         _ => return Err(Error::MetadataError("build-cmd is malformed")),
     };
 
-    let uses_root_config = match config
+    let uses_root_config = config
         .mf
         .lookup("package.metadata.sel4-cmake-options")?
-    {
-        Value::Table(_) => true,
-        _ => false,
-    };
+        .is_table();
 
     Ok(HeliosMetadata {
         root_task: root_task.to_string(),
