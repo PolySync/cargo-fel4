@@ -8,7 +8,7 @@ use std::process::Command;
 use toml::Value;
 
 use common;
-use common::{Config, Error};
+use common::{Config, DeepLookup, Error};
 use cpio;
 
 #[derive(Debug, Clone)]
@@ -24,75 +24,70 @@ pub struct HeliosMetadata {
 }
 
 pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
-    let package_table = match &config.mf {
-        Value::Table(t) => match t.get("package") {
-            Some(ht) => match ht {
-                Value::Table(h) => h,
-                _ => {
-                    return Err(Error::MetadataError(
-                        "package section is malformed",
-                    ))
-                }
-            },
-            None => return Err(Error::MetadataError("missing package section")),
-        },
+    let default_target = match config
+        .mf
+        .lookup("package.metadata.helios.default-target")?
+    {
+        Value::String(s) => s,
         _ => {
             return Err(Error::MetadataError(
-                "package section is malformed",
+                "default-target is malformed",
             ))
         }
     };
-
-    let metadata_table = match package_table.get("metadata") {
-        Some(ht) => match ht {
-            Value::Table(h) => h,
-            _ => {
-                return Err(Error::MetadataError(
-                    "metadata section is malformed",
-                ))
-            }
-        },
-        None => return Err(Error::MetadataError("missing metadata section")),
-    };
-
-    let helios_table = match metadata_table.get("helios") {
-        Some(ht) => match ht {
-            Value::Table(h) => h,
-            _ => {
-                return Err(Error::MetadataError(
-                    "helios section is malformed",
-                ))
-            }
-        },
-        None => {
+    let target_specs_dir = match config
+        .mf
+        .lookup("package.metadata.helios.target-specs-path")?
+    {
+        Value::String(s) => s,
+        _ => {
             return Err(Error::MetadataError(
-                "missing helios metadata section",
+                "target-specs-path is malformed",
             ))
         }
     };
-
-    let helios_root_task = match helios_table.get("root-task") {
-        Some(v) => match v {
-            Value::String(s) => s,
-            _ => {
-                return Err(Error::MetadataError(
-                    "root-task value isn't a string",
-                ))
-            }
-        },
-        None => return Err(Error::MetadataError("missing root-task key")),
+    let artifact_dir = match config
+        .mf
+        .lookup("package.metadata.helios.artifact-path")?
+    {
+        Value::String(s) => s,
+        _ => {
+            return Err(Error::MetadataError(
+                "artifact-path is malformed",
+            ))
+        }
     };
-
-    let helios_apps = match helios_table.get("apps") {
-        Some(v) => match v {
-            Value::Array(vec) => Some(vec),
-            _ => {
-                return Err(Error::MetadataError(
-                    "helios apps value isn't an array",
-                ))
-            }
-        },
-        None => None,
+    let apps_lib_name = match config
+        .mf
+        .lookup("package.metadata.helios.apps-lib-name")?
+    {
+        Value::String(s) => s,
+        _ => {
+            return Err(Error::MetadataError(
+                "apps-lib-name is malformed",
+            ))
+        }
+    };
+    let helios_apps = match config
+        .mf
+        .lookup("package.metadata.helios.apps")?
+    {
+        Value::Array(s) => Some(s),
+        _ => return Err(Error::MetadataError("apps is malformed")),
+    };
+    let root_task = match config
+        .mf
+        .lookup("package.metadata.helios.root-task")?
+    {
+        Value::String(s) => s,
+        _ => return Err(Error::MetadataError("root-task is malformed")),
+    };
+    let build_cmd = match config
+        .mf
+        .lookup("package.metadata.helios.build-cmd")?
+    {
+        Value::String(s) => s,
+        _ => return Err(Error::MetadataError("build-cmd is malformed")),
     };
 
     let helios_apps_array = match helios_apps {
@@ -104,102 +99,29 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
         }
     };
 
-    let helios_artifact_dir = match helios_table.get("artifact-path") {
-        Some(v) => match v {
-            Value::String(s) => s,
-            _ => {
-                return Err(Error::MetadataError(
-                    "artifact-path value isn't a string",
-                ))
-            }
-        },
-        None => {
-            return Err(Error::MetadataError(
-                "missing artifact-path key",
-            ))
-        }
-    };
-
-    let helios_apps_lib_name = match helios_table.get("apps-lib-name") {
-        Some(v) => match v {
-            Value::String(s) => s,
-            _ => {
-                return Err(Error::MetadataError(
-                    "apps-lib-name value isn't a string",
-                ))
-            }
-        },
-        None => {
-            return Err(Error::MetadataError(
-                "missing apps-lib-name key",
-            ))
-        }
-    };
-
-    let helios_build_cmd = match helios_table.get("build-cmd") {
-        Some(v) => match v {
-            Value::String(s) => s,
-            _ => {
-                return Err(Error::MetadataError(
-                    "build-cmd value isn't a string",
-                ))
-            }
-        },
-        None => return Err(Error::MetadataError("missing build-cmd key")),
-    };
-
-    let helios_target_specs_dir = match helios_table.get("target-specs-path") {
-        Some(v) => match v {
-            Value::String(s) => s,
-            _ => {
-                return Err(Error::MetadataError(
-                    "target-specs-path value isn't a string",
-                ))
-            }
-        },
-        None => {
-            return Err(Error::MetadataError(
-                "missing target-specs-path key",
-            ))
-        }
-    };
-
-    let helios_default_target = match helios_table.get("default-target") {
-        Some(v) => match v {
-            Value::String(s) => s,
-            _ => {
-                return Err(Error::MetadataError(
-                    "default-target value isn't a string",
-                ))
-            }
-        },
-        None => {
-            return Err(Error::MetadataError(
-                "missing default-target key",
-            ))
-        }
-    };
-
-    let uses_root_config = match metadata_table.get("sel4-cmake-options") {
-        Some(_) => true,
-        None => false,
+    let uses_root_config = match config
+        .mf
+        .lookup("package.metadata.sel4-cmake-options")?
+    {
+        Value::Table(_) => true,
+        _ => false,
     };
 
     // TODO - error handling
     Ok(HeliosMetadata {
-        root_task: helios_root_task.to_string(),
+        root_task: root_task.to_string(),
         apps: helios_apps_array
             .iter()
             .map(|x| x.as_str().unwrap().to_string())
             //.map(|x| x.to_string())
             .collect::<Vec<_>>(),
         artifact_path: PathBuf::from(config.md.workspace_root.clone())
-            .join(helios_artifact_dir),
-        apps_lib_name: helios_apps_lib_name.to_string(),
-        build_cmd: helios_build_cmd.to_string(),
+            .join(artifact_dir),
+        apps_lib_name: apps_lib_name.to_string(),
+        build_cmd: build_cmd.to_string(),
         target_specs_path: PathBuf::from(config.md.workspace_root.clone())
-            .join(helios_target_specs_dir),
-        default_target: helios_default_target.to_string(),
+            .join(target_specs_dir),
+        default_target: default_target.to_string(),
         uses_root_manifest_config: uses_root_config,
     })
 }
