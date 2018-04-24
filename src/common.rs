@@ -50,6 +50,28 @@ impl fmt::Display for Error {
     }
 }
 
+pub trait DeepLookup {
+    /// `lookup` takes a namespace in dot-separated format: `"a.b.c" and uses
+    /// it to traverse a trie-like structure.
+    fn lookup(&self, ns: &str) -> Result<&Self, Error>;
+}
+
+impl DeepLookup for Value {
+    fn lookup(&self, ns: &str) -> Result<&Self, Error> {
+        let ns_iter = ns.split('.');
+        ns_iter.fold(Ok(self), |state, key| match state {
+            Ok(v) => match v {
+                Value::Table(t) => match t.get(key) {
+                    Some(next) => Ok(next),
+                    None => Err(Error::MetadataError("couldn't find key")),
+                },
+                _ => Err(Error::MetadataError("couldn't find key")),
+            },
+            Err(e) => Err(e),
+        })
+    }
+}
+
 pub fn update_git_submodules(cwd: &str) {
     let mut cmd = Command::new("git");
 
