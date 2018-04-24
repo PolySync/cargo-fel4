@@ -63,17 +63,31 @@ TODO
 
 TODO
 
-## Example System-Level Cargo.toml
+## Helios Metadata
 
-The system-level Cargo.toml is a virtual manifest.
+The `cargo-fel4` subcommand will look for a `[package.metadata.helios]` table for
+configurations.
 
 ```
-[metadata.helios]
-root-task = "root-task"
+[package.metadata.helios]
+# path to package responsible being the root task, empty string means use the current package
+root-task = ""
+
+# array of paths to external binary executable packages to be linked into the root task binary
 apps = []
-artifact-path = "images"
+
+# path where output artifacts are stored
+artifact-path = "../images"
+
+# apps[] are intermediately linked via a static library
 apps-lib-name = "fel4_apps"
+
+# command used to build packages
 build-cmd = "xargo"
-target-specs-path = "targets"
+
+# path to target specification files
+target-specs-path = "../res/target_specs"
+
+# the default target
 default-target = "x86_64-sel4-helios"
 ```
