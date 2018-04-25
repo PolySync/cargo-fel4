@@ -130,7 +130,7 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
             .join(target_specs_dir),
         default_target: default_target.to_string(),
         uses_root_manifest_config: uses_root_config,
-        is_workspace_build: is_workspace_build,
+        is_workspace_build,
     })
 }
 
@@ -141,33 +141,35 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         println!("\n{:#?}", helios_md);
     }
 
-    let build_type = match config.args.flag_release {
-        true => String::from("release"),
-        false => String::from("debug"),
+    let build_type = if config.args.flag_release {
+        String::from("release")
+    } else {
+        String::from("debug")
     };
 
-    let target_spec = match config.args.flag_target.is_empty() {
-        true => helios_md.default_target.clone(),
-        false => config.args.flag_target.clone(),
+    let target_spec = if config.args.flag_target.is_empty() {
+        helios_md.default_target.clone()
+    } else {
+        config.args.flag_target.clone()
     };
 
     let target_build_cache_path = PathBuf::from(&config.md.target_directory)
         .join(&target_spec)
         .join(&build_type);
 
-    let root_task_path = match helios_md.root_task.is_empty() {
-        true => PathBuf::from(&config.md.workspace_root),
-        false => {
-            PathBuf::from(&config.md.workspace_root).join(&helios_md.root_task)
-        }
+    let root_task_path = if helios_md.root_task.is_empty() {
+        PathBuf::from(&config.md.workspace_root)
+    } else {
+        PathBuf::from(&config.md.workspace_root).join(&helios_md.root_task)
     };
 
     let helios_sel4_config_manifest_path =
         PathBuf::from(&config.md.workspace_root);
 
-    let root_task_name = match helios_md.root_task.is_empty() {
-        true => config.md.packages[0].name.clone(),
-        false => helios_md.root_task.clone(),
+    let root_task_name = if helios_md.root_task.is_empty() {
+        config.md.packages[0].name.clone()
+    } else {
+        helios_md.root_task.clone()
     };
 
     if config.args.flag_verbose {
