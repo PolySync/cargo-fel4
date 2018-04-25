@@ -35,9 +35,10 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
         _ => true,
     };
 
-    let base_key = match is_workspace_build {
-        true => String::new(),
-        false => String::from("package."),
+    let base_key = if is_workspace_build {
+        String::new()
+    } else {
+        String::from("package.")
     };
 
     let default_target = match config.mf.lookup(&format!(
@@ -180,7 +181,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
             "seL4 configuration manifest path: {:?}",
             helios_sel4_config_manifest_path.join("Cargo.toml")
         );
-        println!("");
+        println!();
     }
 
     if !helios_md.apps.is_empty() {
