@@ -5,9 +5,8 @@ extern crate cargo_metadata;
 extern crate docopt;
 extern crate toml;
 
-use cargo_metadata::metadata_deps;
+use common::{parse_config, Config};
 use docopt::Docopt;
-use std::path::Path;
 
 mod build_cmd;
 mod common;
@@ -46,29 +45,32 @@ Run `cargo fel4 deploy` to deploy the system image to a given platform.
 ";
 
 fn main() {
-    let margs: common::Args = Docopt::new(USAGE)
+    let cli_args: common::CliArgs = Docopt::new(USAGE)
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
-    let md_path = margs.arg_path.as_ref().map(Path::new);
-
-    let m_md = metadata_deps(md_path, false).unwrap();
-
-    let m_mf = common::read_manifest(&m_md.workspace_root);
-
-    let config = common::Config {
-        args: margs.clone(),
-        md: m_md,
-        mf: m_mf,
+    let config: Config = match parse_config(&cli_args) {
+        Ok(c) => c,
+        Err(e) => {
+            println!("configuration failure: {}", e);
+            return;
+        }
     };
 
-    println!("using workspace '{}'", config.md.workspace_root);
+    if config.cli_args.flag_verbose {
+        println!(
+            "using workspace '{}'",
+            config.root_metadata.workspace_root
+        );
+    }
 
-    if config.args.cmd_build {
+    if config.cli_args.cmd_build {
         if let Err(e) = build_cmd::handle_build_cmd(&config) {
             println!("failure: {}", e)
         }
-    } else if config.args.cmd_simulate {
-        simulate_cmd::handle_simulate_cmd(&config);
+    } else if config.cli_args.cmd_simulate {
+        if let Err(e) = simulate_cmd::handle_simulate_cmd(&config) {
+            println!("failure: {}", e)
+        }
     }
 }

@@ -4,23 +4,25 @@ extern crate toml;
 use std::path::PathBuf;
 use std::process::Command;
 
-use common;
-use common::Config;
+use common::{fail, run_cmd, Config, Error};
 
-/// TODO - need to use configs
-pub fn handle_simulate_cmd(config: &Config) {
-    let sim_script_rel_path: PathBuf = ["images", "simulate"].iter().collect();
+pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
+    let sim_script_path =
+        PathBuf::from(&config.helios_metadata.artifact_path).join("simulate");
 
-    let workspace_root = PathBuf::from(&config.md.workspace_root);
-
-    if !workspace_root
-        .join(&sim_script_rel_path)
-        .exists()
-    {
-        common::fail("something went wrong with the build, cannot find the simulation script");
+    if !sim_script_path.exists() {
+        fail("something went wrong with the build, cannot find the simulation script");
     }
 
-    common::run_cmd(
-        Command::new(&sim_script_rel_path).current_dir(workspace_root),
-    );
+    let run_from_path = match sim_script_path.parent() {
+        Some(p) => match p.parent() {
+            Some(nextp) => nextp,
+            _ => return Err(Error::IO("SDFSDF".to_string())),
+        },
+        _ => return Err(Error::IO("SDFSDF".to_string())),
+    };
+
+    run_cmd(Command::new(&sim_script_path).current_dir(run_from_path));
+
+    Ok(())
 }

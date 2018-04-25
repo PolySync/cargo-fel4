@@ -1,17 +1,18 @@
 extern crate cargo_metadata;
 extern crate toml;
 
-use cargo_metadata::Metadata;
+use cargo_metadata::{metadata_deps, Metadata};
 use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::io::ErrorKind;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use toml::Value;
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Args {
+pub struct CliArgs {
     pub flag_verbose: bool,
     pub flag_quiet: bool,
     pub flag_release: bool,
@@ -24,15 +25,37 @@ pub struct Args {
     pub arg_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct HeliosMetadata {
+    #[serde(rename = "root-task")]
+    pub root_task: String,
+    pub apps: Vec<String>,
+    #[serde(rename = "artifact-path")]
+    pub artifact_path: PathBuf,
+    #[serde(rename = "apps-lib-name")]
+    pub apps_lib_name: String,
+    #[serde(rename = "build-cmd")]
+    pub build_cmd: String,
+    #[serde(rename = "target-specs-path")]
+    pub target_specs_path: PathBuf,
+    #[serde(rename = "default-target")]
+    pub default_target: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct Config {
-    pub args: Args,
-    pub md: Metadata,
-    pub mf: Value,
+    pub cli_args: CliArgs,
+    pub root_metadata: Metadata,
+    pub root_manifest: Value,
+    pub helios_metadata: HeliosMetadata,
+    pub is_workspace_build: bool,
+    pub uses_root_manifest_config: bool,
 }
 
 pub enum Error {
     MetadataError(&'static str),
     IO(String),
+    CargoMetadataError(String),
 }
 
 impl From<io::Error> for Error {
@@ -41,11 +64,20 @@ impl From<io::Error> for Error {
     }
 }
 
+impl From<cargo_metadata::Error> for Error {
+    fn from(e: cargo_metadata::Error) -> Self {
+        Error::CargoMetadataError(format!("{}", e))
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::MetadataError(msg) => write!(f, "metadata error: {}", msg),
             Error::IO(msg) => write!(f, "IO error: {}", msg),
+            Error::CargoMetadataError(msg) => {
+                write!(f, "cargo metadata error: {}", msg)
+            }
         }
     }
 }
@@ -70,6 +102,87 @@ impl DeepLookup for Value {
             Err(e) => Err(e),
         })
     }
+}
+
+pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
+    let root_manifest_path = cli_args.arg_path.as_ref().map(Path::new);
+
+    let root_manifest_metadata = metadata_deps(root_manifest_path, false)?;
+
+    let root_manifest = read_manifest(&root_manifest_metadata.workspace_root);
+
+    let is_workspace_build =
+        match &root_manifest_metadata.workspace_members.len() {
+            0 => {
+                return Err(Error::MetadataError(
+                    "metadata reports there are no packages",
+                ))
+            }
+            1 => false,
+            _ => true,
+        };
+
+    let base_key = if is_workspace_build {
+        String::new()
+    } else {
+        String::from("package.")
+    };
+
+    let metadata_string =
+        match &root_manifest.lookup(&format!("{}metadata.helios", base_key))? {
+            Value::Table(t) => match toml::to_string(t) {
+                Ok(s) => s,
+                _ => {
+                    return Err(Error::MetadataError(
+                        "metadata table is malformed",
+                    ))
+                }
+            },
+            _ => {
+                return Err(Error::MetadataError(
+                    "metadata table is malformed",
+                ));
+            }
+        };
+
+    let uses_root_config = match &root_manifest.lookup(&format!(
+        "{}metadata.sel4-cmake-options",
+        base_key
+    )) {
+        Ok(_) => true,
+        _ => false,
+    };
+
+    let helios_metadata: HeliosMetadata =
+        toml::from_str(metadata_string.as_str()).unwrap();
+
+    // turn the relative paths into absolute
+    let mut mut_helios_metadata = helios_metadata.clone();
+
+    mut_helios_metadata.artifact_path = PathBuf::new();
+    mut_helios_metadata
+        .artifact_path
+        .push(&root_manifest_metadata.workspace_root);
+    mut_helios_metadata
+        .artifact_path
+        .push(helios_metadata.artifact_path);
+
+    mut_helios_metadata.target_specs_path = PathBuf::new();
+    mut_helios_metadata
+        .target_specs_path
+        .push(&root_manifest_metadata.workspace_root);
+    mut_helios_metadata
+        .target_specs_path
+        .push(helios_metadata.target_specs_path);
+
+    Ok(Config {
+        cli_args: cli_args.clone(),
+        root_metadata: root_manifest_metadata,
+        root_manifest,
+        helios_metadata: mut_helios_metadata,
+        is_workspace_build,
+        uses_root_manifest_config: uses_root_config,
+    })
 }
 
 pub fn read_manifest(path: &str) -> toml::Value {

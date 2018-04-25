@@ -8,7 +8,7 @@ use common;
 /// create a relocable ELF cpio archive that can be linked into another target
 pub fn make_cpio_archive(
     input_file: &Path,
-    output_name: &String,
+    output_name: &str,
     output_dir: &Path,
     append: bool,
 ) {
@@ -32,7 +32,7 @@ pub fn make_cpio_archive(
     // we could just pipe a string into stdin of our cpio command instead of
     // this
     let file_echo = Command::new("echo")
-        .arg(&format!("{}", basename.to_str().unwrap()))
+        .arg(basename.to_str().unwrap().to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -83,9 +83,9 @@ pub fn make_cpio_archive(
             .arg("-r")
             .arg("-b")
             .arg("binary")
-            .arg(&format!("archive.{}.cpio", output_name))
+            .arg(output_name.to_string())
             .arg("-o")
-            .arg(&format!("{}", output_name)),
+            .arg(output_name.to_string()),
     );
 
     if dirname != Path::new(output_dir) {
