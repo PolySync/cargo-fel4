@@ -83,7 +83,7 @@ pub fn make_cpio_archive(
             .arg("-r")
             .arg("-b")
             .arg("binary")
-            .arg(output_name.to_string())
+            .arg(&format!("archive.{}.cpio", output_name))
             .arg("-o")
             .arg(output_name.to_string()),
     );
