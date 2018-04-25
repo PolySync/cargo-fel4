@@ -20,14 +20,30 @@ pub struct HeliosMetadata {
     build_cmd: String,
     target_specs_path: PathBuf,
     default_target: String,
+    is_workspace_build: bool,
     uses_root_manifest_config: bool,
 }
 
 pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
-    let default_target = match config
-        .mf
-        .lookup("package.metadata.helios.default-target")?
-    {
+    let is_workspace_build = match config.md.workspace_members.len() {
+        0 => {
+            return Err(Error::MetadataError(
+                "metadata reports there are no packages",
+            ))
+        }
+        1 => false,
+        _ => true,
+    };
+
+    let base_key = match is_workspace_build {
+        true => String::new(),
+        false => String::from("package."),
+    };
+
+    let default_target = match config.mf.lookup(&format!(
+        "{}metadata.helios.default-target",
+        base_key
+    ))? {
         Value::String(s) => s,
         _ => {
             return Err(Error::MetadataError(
@@ -35,10 +51,10 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
             ))
         }
     };
-    let target_specs_dir = match config
-        .mf
-        .lookup("package.metadata.helios.target-specs-path")?
-    {
+    let target_specs_dir = match config.mf.lookup(&format!(
+        "{}metadata.helios.target-specs-path",
+        base_key
+    ))? {
         Value::String(s) => s,
         _ => {
             return Err(Error::MetadataError(
@@ -46,10 +62,10 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
             ))
         }
     };
-    let artifact_dir = match config
-        .mf
-        .lookup("package.metadata.helios.artifact-path")?
-    {
+    let artifact_dir = match config.mf.lookup(&format!(
+        "{}metadata.helios.artifact-path",
+        base_key
+    ))? {
         Value::String(s) => s,
         _ => {
             return Err(Error::MetadataError(
@@ -57,10 +73,10 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
             ))
         }
     };
-    let apps_lib_name = match config
-        .mf
-        .lookup("package.metadata.helios.apps-lib-name")?
-    {
+    let apps_lib_name = match config.mf.lookup(&format!(
+        "{}metadata.helios.apps-lib-name",
+        base_key
+    ))? {
         Value::String(s) => s,
         _ => {
             return Err(Error::MetadataError(
@@ -70,30 +86,33 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
     };
     let helios_apps = match config
         .mf
-        .lookup("package.metadata.helios.apps")?
+        .lookup(&format!("{}metadata.helios.apps", base_key))?
     {
         Value::Array(s) => s,
         _ => return Err(Error::MetadataError("apps is malformed")),
     };
-    let root_task = match config
-        .mf
-        .lookup("package.metadata.helios.root-task")?
-    {
+    let root_task = match config.mf.lookup(&format!(
+        "{}metadata.helios.root-task",
+        base_key
+    ))? {
         Value::String(s) => s,
         _ => return Err(Error::MetadataError("root-task is malformed")),
     };
-    let build_cmd = match config
-        .mf
-        .lookup("package.metadata.helios.build-cmd")?
-    {
+    let build_cmd = match config.mf.lookup(&format!(
+        "{}metadata.helios.build-cmd",
+        base_key
+    ))? {
         Value::String(s) => s,
         _ => return Err(Error::MetadataError("build-cmd is malformed")),
     };
 
-    let uses_root_config = config
-        .mf
-        .lookup("package.metadata.sel4-cmake-options")?
-        .is_table();
+    let uses_root_config = match config.mf.lookup(&format!(
+        "{}metadata.sel4-cmake-options",
+        base_key
+    )) {
+        Ok(_) => true,
+        _ => false,
+    };
 
     Ok(HeliosMetadata {
         root_task: root_task.to_string(),
@@ -110,11 +129,16 @@ pub fn parse_helios_metadata(config: &Config) -> Result<HeliosMetadata, Error> {
             .join(target_specs_dir),
         default_target: default_target.to_string(),
         uses_root_manifest_config: uses_root_config,
+        is_workspace_build: is_workspace_build,
     })
 }
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let helios_md = parse_helios_metadata(config)?;
+
+    if config.args.flag_verbose {
+        println!("\n{:#?}", helios_md);
+    }
 
     let build_type = match config.args.flag_release {
         true => String::from("release"),
@@ -139,23 +163,38 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         }
     };
 
+    let helios_sel4_config_manifest_path =
+        PathBuf::from(&config.md.workspace_root);
+
     let root_task_name = match helios_md.root_task.is_empty() {
         true => config.md.packages[0].name.clone(),
         false => helios_md.root_task.clone(),
     };
 
+    if config.args.flag_verbose {
+        println!(
+            "\ntarget build cache: {:?}",
+            target_build_cache_path
+        );
+        println!("root task name: {:?}", root_task_name);
+        println!("root task path: {:?}", root_task_path);
+        println!(
+            "seL4 configuration manifest path: {:?}",
+            helios_sel4_config_manifest_path.join("Cargo.toml")
+        );
+        println!("");
+    }
+
     if !helios_md.apps.is_empty() {
         let archive_name = format!("{}.o", helios_md.apps_lib_name);
         let archive_lib = format!("lib{}.a", helios_md.apps_lib_name);
 
-        println!();
-        println!(
-            "creating archive '{}'",
-            target_build_cache_path
-                .join(&archive_name)
-                .display()
-        );
-        println!();
+        if config.args.flag_verbose {
+            println!(
+                "\ncreating archive {:?}\n",
+                target_build_cache_path.join(&archive_name)
+            );
+        }
 
         let mut append = false;
         for app_name in helios_md.apps {
@@ -186,7 +225,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
                 if helios_md.uses_root_manifest_config {
                     cmd.env(
                         "HELIOS_MANIFEST_PATH",
-                        &root_task_path.join("Cargo.toml"),
+                        &helios_sel4_config_manifest_path.join("Cargo.toml"),
                     );
                 }
 
@@ -264,7 +303,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     if helios_md.uses_root_manifest_config {
         cmd.env(
             "HELIOS_MANIFEST_PATH",
-            &root_task_path.join("Cargo.toml"),
+            &helios_sel4_config_manifest_path.join("Cargo.toml"),
         );
     }
 
