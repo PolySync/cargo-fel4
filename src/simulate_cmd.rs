@@ -14,7 +14,6 @@ pub fn handle_simulate_cmd(config: &Config) {
     let workspace_root = PathBuf::from(&config.md.workspace_root);
 
     if !workspace_root
-        .join("../")
         .join(&sim_script_rel_path)
         .exists()
     {
@@ -22,7 +21,6 @@ pub fn handle_simulate_cmd(config: &Config) {
     }
 
     common::run_cmd(
-        Command::new(&sim_script_rel_path)
-            .current_dir(workspace_root.join("..")),
+        Command::new(&sim_script_rel_path).current_dir(workspace_root),
     );
 }

@@ -154,8 +154,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         .join(&target_spec)
         .join(&build_type);
 
-    // TODO - use root-task and apps as names to lookup their path in
-    // config.md.packages
     let root_task_path = match helios_md.root_task.is_empty() {
         true => PathBuf::from(&config.md.workspace_root),
         false => {
@@ -199,8 +197,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         let mut append = false;
         for app_name in helios_md.apps {
             if app_name != helios_md.root_task {
-                // TODO - use root-task and apps as names to lookup their path
-                // in config.md.packages
                 let app_path =
                     PathBuf::from(&config.md.workspace_root).join(&app_name);
 
