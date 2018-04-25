@@ -8,7 +8,7 @@ use common;
 /// create a relocable ELF cpio archive that can be linked into another target
 pub fn make_cpio_archive(
     input_file: &Path,
-    output_name: &String,
+    output_name: &str,
     output_dir: &Path,
     append: bool,
 ) {
