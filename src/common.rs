@@ -56,6 +56,8 @@ pub enum Error {
     MetadataError(&'static str),
     IO(String),
     CargoMetadataError(String),
+    TomlSerError(String),
+    TomlDeError(String),
 }
 
 impl From<io::Error> for Error {
@@ -70,6 +72,18 @@ impl From<cargo_metadata::Error> for Error {
     }
 }
 
+impl From<toml::ser::Error> for Error {
+    fn from(e: toml::ser::Error) -> Self {
+        Error::TomlSerError(format!("{}", e))
+    }
+}
+
+impl From<toml::de::Error> for Error {
+    fn from(e: toml::de::Error) -> Self {
+        Error::TomlDeError(format!("{}", e))
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -77,6 +91,12 @@ impl fmt::Display for Error {
             Error::IO(msg) => write!(f, "IO error: {}", msg),
             Error::CargoMetadataError(msg) => {
                 write!(f, "cargo metadata error: {}", msg)
+            }
+            Error::TomlSerError(msg) => {
+                write!(f, "toml serialize error: {}", msg)
+            }
+            Error::TomlDeError(msg) => {
+                write!(f, "toml deserialize error: {}", msg)
             }
         }
     }
@@ -109,7 +129,7 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
 
     let root_manifest_metadata = metadata_deps(root_manifest_path, false)?;
 
-    let root_manifest = read_manifest(&root_manifest_metadata.workspace_root);
+    let root_manifest = read_manifest(&root_manifest_metadata.workspace_root)?;
 
     let is_workspace_build =
         match &root_manifest_metadata.workspace_members.len() {
@@ -128,23 +148,6 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
         String::from("package.")
     };
 
-    let metadata_string =
-        match &root_manifest.lookup(&format!("{}metadata.helios", base_key))? {
-            Value::Table(t) => match toml::to_string(t) {
-                Ok(s) => s,
-                _ => {
-                    return Err(Error::MetadataError(
-                        "metadata table is malformed",
-                    ))
-                }
-            },
-            _ => {
-                return Err(Error::MetadataError(
-                    "metadata table is malformed",
-                ));
-            }
-        };
-
     let uses_root_config = match &root_manifest.lookup(&format!(
         "{}metadata.sel4-cmake-options",
         base_key
@@ -153,8 +156,18 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
         _ => false,
     };
 
+    let metadata_string: String =
+        match &root_manifest.lookup(&format!("{}metadata.helios", base_key))? {
+            Value::Table(t) => toml::to_string(t)?,
+            _ => {
+                return Err(Error::MetadataError(
+                    "metadata table is malformed",
+                ));
+            }
+        };
+
     let mut helios_metadata: HeliosMetadata =
-        toml::from_str(metadata_string.as_str()).unwrap();
+        toml::from_str(metadata_string.as_str())?;
 
     // turn the relative paths into absolute
     helios_metadata.artifact_path = PathBuf::new()
@@ -175,13 +188,12 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
     })
 }
 
-pub fn read_manifest(path: &str) -> toml::Value {
+pub fn read_manifest(path: &str) -> Result<Value, Error> {
     let manifest_path = format!("{}/Cargo.toml", path);
-    let mut file = File::open(manifest_path).unwrap();
+    let mut file = File::open(manifest_path)?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
-
-    contents.parse::<Value>().unwrap()
+    file.read_to_string(&mut contents)?;
+    Ok(contents.parse::<Value>()?)
 }
 
 pub fn run_cmd(cmd: &mut Command) {
