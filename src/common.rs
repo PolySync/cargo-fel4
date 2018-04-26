@@ -58,6 +58,7 @@ pub enum Error {
     CargoMetadataError(String),
     TomlSerError(String),
     TomlDeError(String),
+    ExitStatusError(String),
 }
 
 impl From<io::Error> for Error {
@@ -98,6 +99,7 @@ impl fmt::Display for Error {
             Error::TomlDeError(msg) => {
                 write!(f, "toml deserialize error: {}", msg)
             }
+            Error::ExitStatusError(msg) => write!(f, "command error: {}", msg),
         }
     }
 }
@@ -197,23 +199,32 @@ pub fn read_manifest(path: &str) -> Result<Value, Error> {
     Ok(contents.parse::<Value>()?)
 }
 
-pub fn run_cmd(cmd: &mut Command) {
-    println!("running: {:?}", cmd);
+pub fn run_cmd(verbose: bool, cmd: &mut Command) -> Result<(), Error> {
+    if verbose {
+        println!("running: {:?}", cmd);
+    }
+
     let status = match cmd.status() {
         Ok(status) => status,
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
-            fail(&format!("failed to execute command: {}\ndoes the program exist on the system?", e));
+            return Err(Error::ExitStatusError(format!(
+                "failed to execute command: {}\ndoes the program exist on the system?",
+                e)));
         }
-        Err(e) => fail(&format!("failed to execute command: {}", e)),
+        Err(e) => {
+            return Err(Error::ExitStatusError(format!(
+                "failed to execute command: {}",
+                e
+            )));
+        }
     };
+
     if !status.success() {
-        fail(&format!(
+        return Err(Error::ExitStatusError(format!(
             "command did not execute successfully, got: {}",
             status
-        ));
+        )));
     }
-}
 
-pub fn fail(s: &str) -> ! {
-    panic!("\n{}\n\nbuild script failed, must exit now", s)
+    Ok(())
 }

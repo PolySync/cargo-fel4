@@ -5,12 +5,13 @@ extern crate cargo_metadata;
 extern crate docopt;
 extern crate toml;
 
-use common::{parse_config, Config};
+use build_cmd::handle_build_cmd;
+use common::{parse_config, CliArgs, Config};
 use docopt::Docopt;
+use simulate_cmd::handle_simulate_cmd;
 
 mod build_cmd;
 mod common;
-mod cpio;
 mod simulate_cmd;
 
 const USAGE: &str = "
@@ -45,7 +46,7 @@ Run `cargo fel4 deploy` to deploy the system image to a given platform.
 ";
 
 fn main() {
-    let cli_args: common::CliArgs = Docopt::new(USAGE)
+    let cli_args: CliArgs = Docopt::new(USAGE)
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
@@ -65,11 +66,11 @@ fn main() {
     }
 
     if config.cli_args.cmd_build {
-        if let Err(e) = build_cmd::handle_build_cmd(&config) {
+        if let Err(e) = handle_build_cmd(&config) {
             println!("failure: {}", e)
         }
     } else if config.cli_args.cmd_simulate {
-        if let Err(e) = simulate_cmd::handle_simulate_cmd(&config) {
+        if let Err(e) = handle_simulate_cmd(&config) {
             println!("failure: {}", e)
         }
     }

@@ -5,9 +5,7 @@ use std::fs::{copy, create_dir};
 use std::path::PathBuf;
 use std::process::Command;
 
-use common;
-use common::{Config, Error};
-use cpio;
+use common::{run_cmd, Config, Error};
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     if config.cli_args.flag_verbose {
@@ -61,110 +59,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         println!();
     }
 
-    if !config.helios_metadata.apps.is_empty() {
-        let archive_name =
-            format!("{}.o", config.helios_metadata.apps_lib_name);
-        let archive_lib =
-            format!("lib{}.a", config.helios_metadata.apps_lib_name);
-
-        if config.cli_args.flag_verbose {
-            println!(
-                "\ncreating archive {:?}\n",
-                target_build_cache_path.join(&archive_name)
-            );
-        }
-
-        let mut append = false;
-        for app_name in &config.helios_metadata.apps {
-            if *app_name != config.helios_metadata.root_task {
-                let app_path = PathBuf::from(
-                    &config.root_metadata.workspace_root,
-                ).join(&app_name);
-
-                println!("processing application '{}'", app_name);
-
-                let mut cmd = Command::new(&config.helios_metadata.build_cmd);
-
-                cmd.arg("build");
-
-                if config.cli_args.flag_release {
-                    cmd.arg("--release");
-                }
-
-                if config.cli_args.flag_quiet {
-                    cmd.arg("--quiet");
-                }
-
-                if config.cli_args.flag_verbose {
-                    cmd.arg("--verbose");
-                }
-
-                if config.uses_root_manifest_config {
-                    cmd.env(
-                        "HELIOS_MANIFEST_PATH",
-                        &helios_sel4_config_manifest_path.join("Cargo.toml"),
-                    );
-                }
-
-                common::run_cmd(
-                    cmd.current_dir(app_path)
-                        .env(
-                            "RUST_TARGET_PATH",
-                            &config.helios_metadata.target_specs_path,
-                        )
-                        .env(
-                            "HELIOS_ARTIFACT_PATH",
-                            &config.helios_metadata.artifact_path,
-                        )
-                        .arg("--target")
-                        .arg(&target_spec),
-                );
-
-                cpio::make_cpio_archive(
-                    &target_build_cache_path.join(app_name),
-                    &archive_name.to_string(),
-                    &target_build_cache_path,
-                    append,
-                );
-
-                append = true;
-
-                println!();
-            }
-        }
-
-        println!();
-        println!(
-            "creating applications library '{}'",
-            archive_lib
-        );
-        println!();
-
-        // archive the apps ELF archive into a static library
-        let mut cmd = Command::new("ar");
-        common::run_cmd(
-            cmd.current_dir(&target_build_cache_path)
-                .arg("rcs")
-                .arg(&archive_lib)
-                .arg(&archive_name),
-        );
-
-        // copy the applications archive library into pre-existing linker
-        // directory
-        let mut cmd = Command::new("cp");
-        common::run_cmd(
-            cmd.current_dir(&target_build_cache_path)
-                .arg("-f")
-                .arg(&archive_lib)
-                .arg(&format!(
-                    "{}/{}/{}/deps/",
-                    config.root_metadata.target_directory,
-                    target_spec,
-                    build_type
-                )),
-        );
-    }
-
     println!();
     println!("building root task '{}'", root_task_name);
     println!();
@@ -192,7 +86,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         );
     }
 
-    common::run_cmd(
+    run_cmd(
+        config.cli_args.flag_verbose,
         cmd.current_dir(root_task_path)
             .env(
                 "RUST_TARGET_PATH",
@@ -204,7 +99,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
             )
             .arg("--target")
             .arg(&target_spec),
-    );
+    )?;
 
     let sysimg_path = config
         .helios_metadata
@@ -226,15 +121,15 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     )?;
 
     if !sysimg_path.exists() {
-        common::fail(
+        return Err(Error::MetadataError(
             "something went wrong with the build, cannot find the system image",
-        );
+        ));
     }
 
     if !kernel_path.exists() {
-        common::fail(
+        return Err(Error::MetadataError(
             "something went wrong with the build, cannot find the kernel file",
-        );
+        ));
     }
 
     println!();

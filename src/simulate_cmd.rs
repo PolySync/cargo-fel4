@@ -4,14 +4,14 @@ extern crate toml;
 use std::path::PathBuf;
 use std::process::Command;
 
-use common::{fail, run_cmd, Config, Error};
+use common::{run_cmd, Config, Error};
 
 pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
     let sim_script_path =
         PathBuf::from(&config.helios_metadata.artifact_path).join("simulate");
 
     if !sim_script_path.exists() {
-        fail("something went wrong with the build, cannot find the simulation script");
+        return Err(Error::MetadataError("something went wrong with the build, cannot find the simulation script"));
     }
 
     let run_from_path = match sim_script_path.parent() {
@@ -22,7 +22,10 @@ pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
         _ => return Err(Error::IO("SDFSDF".to_string())),
     };
 
-    run_cmd(Command::new(&sim_script_path).current_dir(run_from_path));
+    run_cmd(
+        config.cli_args.flag_verbose,
+        Command::new(&sim_script_path).current_dir(run_from_path),
+    )?;
 
     Ok(())
 }
