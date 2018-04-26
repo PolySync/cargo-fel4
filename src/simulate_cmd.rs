@@ -1,14 +1,19 @@
 extern crate cargo_metadata;
 extern crate toml;
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Command;
 
-use common::{run_cmd, Config, Error};
+use common::{run_cmd, Error};
+use config::Config;
 
 pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
-    let sim_script_path =
-        PathBuf::from(&config.helios_metadata.artifact_path).join("simulate");
+    let mut mani_path =
+        Path::new(&config.pkg_metadata.manifest_path).to_path_buf();
+    mani_path.pop();
+    let sim_script_path = mani_path
+        .join(&config.fel4_metadata.artifact_path)
+        .join("simulate");
 
     if !sim_script_path.exists() {
         return Err(Error::MetadataError(
@@ -16,25 +21,7 @@ pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
         sim_script_path.display())));
     }
 
-    let run_from_path = match sim_script_path.parent() {
-        Some(p) => match p.parent() {
-            Some(nextp) => nextp,
-            _ => {
-                return Err(Error::IO(format!(
-                "failed to navigate simulation script parent directory '{}'",
-                p.display()
-            )))
-            }
-        },
-        _ => {
-            return Err(Error::IO(format!(
-                "failed to navigate simulation script parent directory '{}'",
-                sim_script_path.display()
-            )))
-        }
-    };
-
-    run_cmd(Command::new(&sim_script_path).current_dir(run_from_path))?;
+    run_cmd(&mut Command::new(&sim_script_path))?;
 
     Ok(())
 }

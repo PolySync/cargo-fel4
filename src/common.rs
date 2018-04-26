@@ -3,61 +3,16 @@ extern crate colored;
 extern crate log;
 extern crate toml;
 
-use cargo_metadata::{metadata_deps, Metadata};
 use colored::Colorize;
 use std::fmt;
-use std::fs::File;
 use std::io;
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
 use std::process::Command;
 use toml::Value;
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct CliArgs {
-    pub flag_verbose: bool,
-    pub flag_quiet: bool,
-    pub flag_release: bool,
-    pub flag_target: String,
-    pub flag_platform: String,
-    pub cmd_build: bool,
-    pub cmd_simulate: bool,
-    pub cmd_deploy: bool,
-    pub cmd_info: bool,
-    pub arg_path: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct HeliosMetadata {
-    #[serde(rename = "root-task")]
-    pub root_task: String,
-    pub apps: Vec<String>,
-    #[serde(rename = "artifact-path")]
-    pub artifact_path: PathBuf,
-    #[serde(rename = "apps-lib-name")]
-    pub apps_lib_name: String,
-    #[serde(rename = "build-cmd")]
-    pub build_cmd: String,
-    #[serde(rename = "target-specs-path")]
-    pub target_specs_path: PathBuf,
-    #[serde(rename = "default-target")]
-    pub default_target: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub cli_args: CliArgs,
-    pub root_metadata: Metadata,
-    pub root_manifest: Value,
-    pub helios_metadata: HeliosMetadata,
-    pub is_workspace_build: bool,
-    pub uses_root_manifest_config: bool,
-}
-
 pub enum Error {
-    MetadataError(String),
+    ConfigError(&'static str),
     IO(String),
-    CargoMetadataError(String),
+    MetadataError(String),
     TomlSerError(String),
     TomlDeError(String),
     ExitStatusError(String),
@@ -71,7 +26,7 @@ impl From<io::Error> for Error {
 
 impl From<cargo_metadata::Error> for Error {
     fn from(e: cargo_metadata::Error) -> Self {
-        Error::CargoMetadataError(format!("{}", e))
+        Error::MetadataError(format!("{}", e))
     }
 }
 
@@ -96,7 +51,7 @@ impl fmt::Display for Error {
                 msg
             ),
             Error::IO(msg) => write!(f, "IO error: {}", msg),
-            Error::CargoMetadataError(msg) => {
+            Error::MetadataError(msg) => {
                 write!(f, "[cargo metadata error] {}\n\ncheck your project's Cargo.toml for invalid syntax", msg)
             }
             Error::TomlSerError(msg) => {
@@ -108,6 +63,8 @@ impl fmt::Display for Error {
             Error::ExitStatusError(msg) => {
                 write!(f, "[command execution error] {}\n\ntry running with verbose flag for more information", msg)
             }
+            Error::ExitStatusError(msg) => write!(f, "command error: {}", msg),
+            Error::ConfigError(msg) => write!(f, "config error: {}", msg),
         }
     }
 }
@@ -167,86 +124,8 @@ impl DeepLookup for Value {
     }
 }
 
-pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
-    let root_manifest_path = cli_args.arg_path.as_ref().map(Path::new);
-
-    let root_manifest_metadata = metadata_deps(root_manifest_path, false)?;
-
-    let root_manifest = read_manifest(&root_manifest_metadata.workspace_root)?;
-
-    let is_workspace_build =
-        match &root_manifest_metadata.workspace_members.len() {
-            0 => {
-                return Err(Error::CargoMetadataError(format!(
-                    "metadata reports there are no packages in '{}'",
-                    PathBuf::from(&root_manifest_metadata.workspace_root)
-                        .join("Cargo.toml")
-                        .display()
-                )))
-            }
-            1 => false,
-            _ => true,
-        };
-
-    let base_key = if is_workspace_build {
-        String::new()
-    } else {
-        String::from("package.")
-    };
-
-    let uses_root_config = match &root_manifest.lookup(&format!(
-        "{}metadata.sel4-cmake-options",
-        base_key
-    )) {
-        Ok(_) => true,
-        _ => false,
-    };
-
-    let mut helios_metadata: HeliosMetadata = {
-        let meta_val = match &root_manifest
-            .lookup(&format!("{}metadata.helios", base_key))?
-        {
-            Value::Table(t) => Value::try_from(t)?,
-            _ => {
-                return Err(Error::MetadataError(format!(
-                    " the [{}metadata.helios] table is malformed",
-                    base_key
-                )));
-            }
-        };
-        meta_val.try_into()?
-    };
-
-    // turn the relative paths into absolute
-    helios_metadata.artifact_path = PathBuf::new()
-        .join(&root_manifest_metadata.workspace_root)
-        .join(&helios_metadata.artifact_path);
-
-    helios_metadata.target_specs_path = PathBuf::new()
-        .join(&root_manifest_metadata.workspace_root)
-        .join(helios_metadata.target_specs_path);
-
-    Ok(Config {
-        cli_args: cli_args.clone(),
-        root_metadata: root_manifest_metadata,
-        root_manifest,
-        helios_metadata,
-        is_workspace_build,
-        uses_root_manifest_config: uses_root_config,
-    })
-}
-
-pub fn read_manifest(path: &str) -> Result<Value, Error> {
-    let manifest_path = format!("{}/Cargo.toml", path);
-    let mut file = File::open(manifest_path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(contents.parse::<Value>()?)
-}
-
 pub fn run_cmd(cmd: &mut Command) -> Result<(), Error> {
-    info!("running command: {:?}", cmd);
-
+    info!("running: {:?}", cmd);
     let status = match cmd.status() {
         Ok(status) => status,
         Err(e) => {
