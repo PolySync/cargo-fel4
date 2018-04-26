@@ -153,33 +153,23 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
         _ => false,
     };
 
-    let helios_metadata: HeliosMetadata =
+    let mut helios_metadata: HeliosMetadata =
         toml::from_str(metadata_string.as_str()).unwrap();
 
     // turn the relative paths into absolute
-    let mut mut_helios_metadata = helios_metadata.clone();
+    helios_metadata.artifact_path = PathBuf::new()
+        .join(&root_manifest_metadata.workspace_root)
+        .join(&helios_metadata.artifact_path);
 
-    mut_helios_metadata.artifact_path = PathBuf::new();
-    mut_helios_metadata
-        .artifact_path
-        .push(&root_manifest_metadata.workspace_root);
-    mut_helios_metadata
-        .artifact_path
-        .push(helios_metadata.artifact_path);
-
-    mut_helios_metadata.target_specs_path = PathBuf::new();
-    mut_helios_metadata
-        .target_specs_path
-        .push(&root_manifest_metadata.workspace_root);
-    mut_helios_metadata
-        .target_specs_path
-        .push(helios_metadata.target_specs_path);
+    helios_metadata.target_specs_path = PathBuf::new()
+        .join(&root_manifest_metadata.workspace_root)
+        .join(helios_metadata.target_specs_path);
 
     Ok(Config {
         cli_args: cli_args.clone(),
         root_metadata: root_manifest_metadata,
         root_manifest,
-        helios_metadata: mut_helios_metadata,
+        helios_metadata,
         is_workspace_build,
         uses_root_manifest_config: uses_root_config,
     })
