@@ -156,18 +156,19 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
         _ => false,
     };
 
-    let metadata_string: String =
-        match &root_manifest.lookup(&format!("{}metadata.helios", base_key))? {
-            Value::Table(t) => toml::to_string(t)?,
+    let mut helios_metadata: HeliosMetadata = {
+        let meta_val = match &root_manifest
+            .lookup(&format!("{}metadata.helios", base_key))?
+        {
+            Value::Table(t) => Value::try_from(t)?,
             _ => {
                 return Err(Error::MetadataError(
                     "metadata table is malformed",
                 ));
             }
         };
-
-    let mut helios_metadata: HeliosMetadata =
-        toml::from_str(metadata_string.as_str())?;
+        meta_val.try_into()?
+    };
 
     // turn the relative paths into absolute
     helios_metadata.artifact_path = PathBuf::new()
