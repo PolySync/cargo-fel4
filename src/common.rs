@@ -1,4 +1,5 @@
 extern crate cargo_metadata;
+extern crate log;
 extern crate toml;
 
 use cargo_metadata::{metadata_deps, Metadata};
@@ -102,6 +103,22 @@ impl fmt::Display for Error {
             Error::ExitStatusError(msg) => write!(f, "command error: {}", msg),
         }
     }
+}
+
+pub struct Logger;
+
+impl log::Log for Logger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::Level::Info
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            println!("{} - {}", record.level(), record.args());
+        }
+    }
+
+    fn flush(&self) {}
 }
 
 pub trait DeepLookup {

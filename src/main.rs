@@ -1,18 +1,22 @@
 #[macro_use]
-
 extern crate serde_derive;
 extern crate cargo_metadata;
 extern crate docopt;
 extern crate toml;
+#[macro_use]
+extern crate log;
 
 use build_cmd::handle_build_cmd;
-use common::{parse_config, CliArgs, Config};
+use common::{parse_config, CliArgs, Config, Logger};
 use docopt::Docopt;
+use log::LevelFilter;
 use simulate_cmd::handle_simulate_cmd;
 
 mod build_cmd;
 mod common;
 mod simulate_cmd;
+
+static LOGGER: Logger = Logger;
 
 const USAGE: &str = "
 Build, manage and simulate Helios feL4 system images
@@ -46,9 +50,23 @@ Run `cargo fel4 deploy` to deploy the system image to a given platform.
 ";
 
 fn main() {
+    // TODO ?
+    if let Err(e) = log::set_logger(&LOGGER) {
+        panic!(
+            "somehow the logger has already been initialized: {}",
+            e
+        );
+    };
+
     let cli_args: CliArgs = Docopt::new(USAGE)
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
+
+    if cli_args.flag_verbose {
+        log::set_max_level(LevelFilter::Info);
+    } else {
+        log::set_max_level(LevelFilter::Error);
+    }
 
     let config: Config = match parse_config(&cli_args) {
         Ok(c) => c,
@@ -58,20 +76,18 @@ fn main() {
         }
     };
 
-    if config.cli_args.flag_verbose {
-        println!(
-            "using workspace '{}'",
-            config.root_metadata.workspace_root
-        );
-    }
+    info!(
+        "using workspace {:?}",
+        config.root_metadata.workspace_root
+    );
 
     if config.cli_args.cmd_build {
         if let Err(e) = handle_build_cmd(&config) {
-            println!("failure: {}", e)
+            error!("build command failure: {}", e)
         }
     } else if config.cli_args.cmd_simulate {
         if let Err(e) = handle_simulate_cmd(&config) {
-            println!("failure: {}", e)
+            error!("simulate command failure: {}", e)
         }
     }
 }
