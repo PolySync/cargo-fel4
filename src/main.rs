@@ -5,6 +5,7 @@ extern crate docopt;
 extern crate toml;
 #[macro_use]
 extern crate log;
+extern crate colored;
 
 use build_cmd::handle_build_cmd;
 use common::{parse_config, CliArgs, Config, Logger};
@@ -50,12 +51,13 @@ Run `cargo fel4 deploy` to deploy the system image to a given platform.
 ";
 
 fn main() {
-    // TODO ?
     if let Err(e) = log::set_logger(&LOGGER) {
-        panic!(
-            "somehow the logger has already been initialized: {}",
+        error!(
+            "somehow the logger has already been initialized:\n{}",
             e
         );
+
+        return;
     };
 
     let cli_args: CliArgs = Docopt::new(USAGE)
@@ -71,23 +73,32 @@ fn main() {
     let config: Config = match parse_config(&cli_args) {
         Ok(c) => c,
         Err(e) => {
-            println!("configuration failure: {}", e);
+            error!(
+                "reading feL4 configurations produced this:\n{}",
+                e
+            );
             return;
         }
     };
 
     info!(
         "using workspace {:?}",
-        config.root_metadata.workspace_root
+        config.root_metadata.workspace_root,
     );
 
     if config.cli_args.cmd_build {
         if let Err(e) = handle_build_cmd(&config) {
-            error!("build command failure: {}", e)
+            error!(
+                "running the feL4 build command produced this:\n{}",
+                e
+            )
         }
     } else if config.cli_args.cmd_simulate {
         if let Err(e) = handle_simulate_cmd(&config) {
-            error!("simulate command failure: {}", e)
+            error!(
+                "running the feL4 simulation command produced this:\n{}",
+                e
+            )
         }
     }
 }

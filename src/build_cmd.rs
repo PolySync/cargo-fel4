@@ -8,9 +8,7 @@ use std::process::Command;
 use common::{run_cmd, Config, Error};
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
-    if config.cli_args.flag_verbose {
-        println!("\n{:#?}", config.helios_metadata);
-    }
+    info!("{:#?}", config.helios_metadata);
 
     let build_type = if config.cli_args.flag_release {
         String::from("release")
@@ -45,23 +43,18 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         config.helios_metadata.root_task.clone()
     };
 
-    if config.cli_args.flag_verbose {
-        println!(
-            "\ntarget build cache: {:?}",
-            target_build_cache_path
-        );
-        println!("root task name: {:?}", root_task_name);
-        println!("root task path: {:?}", root_task_path);
-        println!(
-            "seL4 configuration manifest path: {:?}",
-            helios_sel4_config_manifest_path.join("Cargo.toml")
-        );
-        println!();
-    }
+    info!(
+        "target build cache: {:?}",
+        target_build_cache_path
+    );
+    info!("root task name: {:?}", root_task_name);
+    info!("root task path: {:?}", root_task_path);
+    info!(
+        "seL4 configuration manifest path: {:?}",
+        helios_sel4_config_manifest_path.join("Cargo.toml")
+    );
 
-    println!();
-    println!("building root task '{}'", root_task_name);
-    println!();
+    info!("building root task '{}'", root_task_name);
 
     let mut cmd = Command::new(&config.helios_metadata.build_cmd);
 
@@ -87,7 +80,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     }
 
     run_cmd(
-        config.cli_args.flag_verbose,
         cmd.current_dir(root_task_path)
             .env(
                 "RUST_TARGET_PATH",
@@ -122,24 +114,25 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
 
     if !sysimg_path.exists() {
         return Err(Error::MetadataError(
-            "something went wrong with the build, cannot find the system image",
+            format!("something went wrong with the build, cannot find the system image '{}'",
+            target_build_cache_path.join(&root_task_name).display())
         ));
     }
 
     if !kernel_path.exists() {
         return Err(Error::MetadataError(
-            "something went wrong with the build, cannot find the kernel file",
+            format!("something went wrong with the build, cannot find the kernel file '{}'",
+            kernel_path.display())
         ));
     }
 
-    println!();
-    println!(
-        "artifacts in '{}'",
+    info!(
+        "output artifact path '{}'",
         config.helios_metadata.artifact_path.display()
     );
-    println!("  - kernel");
-    println!("  - feL4img");
-    println!();
+
+    info!("kernel: '{}'", kernel_path.display());
+    info!("feL4img: '{}'", sysimg_path.display());
 
     Ok(())
 }

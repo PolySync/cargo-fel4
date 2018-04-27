@@ -1,8 +1,10 @@
 extern crate cargo_metadata;
+extern crate colored;
 extern crate log;
 extern crate toml;
 
 use cargo_metadata::{metadata_deps, Metadata};
+use colored::Colorize;
 use std::fmt;
 use std::fs::File;
 use std::io;
@@ -54,7 +56,7 @@ pub struct Config {
 }
 
 pub enum Error {
-    MetadataError(&'static str),
+    MetadataError(String),
     IO(String),
     CargoMetadataError(String),
     TomlSerError(String),
@@ -89,18 +91,24 @@ impl From<toml::de::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::MetadataError(msg) => write!(f, "metadata error: {}", msg),
+            Error::MetadataError(msg) => write!(
+                f,
+                "toml metadata error: {}\n\ncheck your project's Cargo.toml [metadata] table(s)",
+                msg
+            ),
             Error::IO(msg) => write!(f, "IO error: {}", msg),
             Error::CargoMetadataError(msg) => {
-                write!(f, "cargo metadata error: {}", msg)
+                write!(f, "cargo metadata error: {}\n\ncheck your project's Cargo.toml for invalid syntax", msg)
             }
             Error::TomlSerError(msg) => {
-                write!(f, "toml serialize error: {}", msg)
+                write!(f, "toml serialize error: {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
             }
             Error::TomlDeError(msg) => {
-                write!(f, "toml deserialize error: {}", msg)
+                write!(f, "toml deserialize error: {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
             }
-            Error::ExitStatusError(msg) => write!(f, "command error: {}", msg),
+            Error::ExitStatusError(msg) => {
+                write!(f, "failed to run a command: {}\n\ntry running with verbose flag for more information", msg)
+            }
         }
     }
 }
@@ -112,9 +120,20 @@ impl log::Log for Logger {
         metadata.level() <= log::Level::Info
     }
 
+    /// Error/Warn are colored red/brigh-yellow to match Cargo/rustc
+    /// Info is colored bright-green
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
+            println!(
+                "{}: {}",
+                match record.level() {
+                    log::Level::Error => "error".red(),
+                    log::Level::Warn => "warn".bright_yellow(),
+                    log::Level::Info => "info".bright_green(),
+                    l => l.to_string().to_lowercase().normal(),
+                },
+                record.args()
+            );
         }
     }
 
@@ -134,9 +153,15 @@ impl DeepLookup for Value {
             Ok(v) => match v {
                 Value::Table(t) => match t.get(key) {
                     Some(next) => Ok(next),
-                    None => Err(Error::MetadataError("couldn't find key")),
+                    None => Err(Error::MetadataError(format!(
+                        "failed to lookup toml key [{}]",
+                        ns
+                    ))),
                 },
-                _ => Err(Error::MetadataError("couldn't find key")),
+                _ => Err(Error::MetadataError(format!(
+                    "failed to lookup toml key [{}]",
+                    ns
+                ))),
             },
             Err(e) => Err(e),
         })
@@ -153,9 +178,12 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
     let is_workspace_build =
         match &root_manifest_metadata.workspace_members.len() {
             0 => {
-                return Err(Error::MetadataError(
-                    "metadata reports there are no packages",
-                ))
+                return Err(Error::CargoMetadataError(format!(
+                    "metadata reports there are no packages in '{}'",
+                    PathBuf::from(&root_manifest_metadata.workspace_root)
+                        .join("Cargo.toml")
+                        .display()
+                )))
             }
             1 => false,
             _ => true,
@@ -181,9 +209,10 @@ pub fn parse_config(cli_args: &CliArgs) -> Result<Config, Error> {
         {
             Value::Table(t) => Value::try_from(t)?,
             _ => {
-                return Err(Error::MetadataError(
-                    "metadata table is malformed",
-                ));
+                return Err(Error::MetadataError(format!(
+                    " the [{}metadata.helios] table is malformed",
+                    base_key
+                )));
             }
         };
         meta_val.try_into()?
@@ -216,10 +245,8 @@ pub fn read_manifest(path: &str) -> Result<Value, Error> {
     Ok(contents.parse::<Value>()?)
 }
 
-pub fn run_cmd(verbose: bool, cmd: &mut Command) -> Result<(), Error> {
-    if verbose {
-        println!("running: {:?}", cmd);
-    }
+pub fn run_cmd(cmd: &mut Command) -> Result<(), Error> {
+    info!("running command: {:?}", cmd);
 
     let status = match cmd.status() {
         Ok(status) => status,
@@ -230,7 +257,7 @@ pub fn run_cmd(verbose: bool, cmd: &mut Command) -> Result<(), Error> {
         }
         Err(e) => {
             return Err(Error::ExitStatusError(format!(
-                "failed to execute command: {}",
+                "failed to execute the command: {}",
                 e
             )));
         }
@@ -238,7 +265,7 @@ pub fn run_cmd(verbose: bool, cmd: &mut Command) -> Result<(), Error> {
 
     if !status.success() {
         return Err(Error::ExitStatusError(format!(
-            "command did not execute successfully, got: {}",
+            "command did not execute successfully: {}",
             status
         )));
     }
