@@ -73,10 +73,7 @@ fn main() {
     let config: Config = match parse_config(&cli_args) {
         Ok(c) => c,
         Err(e) => {
-            error!(
-                "reading feL4 configurations produced this:\n{}",
-                e
-            );
+            error!("failed to parse configuration\n{}", e);
             return;
         }
     };
@@ -88,17 +85,11 @@ fn main() {
 
     if config.cli_args.cmd_build {
         if let Err(e) = handle_build_cmd(&config) {
-            error!(
-                "running the feL4 build command produced this:\n{}",
-                e
-            )
+            error!("failed to run the build command\n{}", e)
         }
     } else if config.cli_args.cmd_simulate {
         if let Err(e) = handle_simulate_cmd(&config) {
-            error!(
-                "running the feL4 simulation command produced this:\n{}",
-                e
-            )
+            error!("failed to run the simulation command\n{}", e)
         }
     }
 }

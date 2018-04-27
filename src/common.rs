@@ -9,7 +9,6 @@ use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use toml::Value;
@@ -93,21 +92,21 @@ impl fmt::Display for Error {
         match self {
             Error::MetadataError(msg) => write!(
                 f,
-                "toml metadata error: {}\n\ncheck your project's Cargo.toml [metadata] table(s)",
+                "[toml metadata error] {}\n\ncheck your project's Cargo.toml [metadata] table(s)",
                 msg
             ),
             Error::IO(msg) => write!(f, "IO error: {}", msg),
             Error::CargoMetadataError(msg) => {
-                write!(f, "cargo metadata error: {}\n\ncheck your project's Cargo.toml for invalid syntax", msg)
+                write!(f, "[cargo metadata error] {}\n\ncheck your project's Cargo.toml for invalid syntax", msg)
             }
             Error::TomlSerError(msg) => {
-                write!(f, "toml serialize error: {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
+                write!(f, "[toml serialize error] {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
             }
             Error::TomlDeError(msg) => {
-                write!(f, "toml deserialize error: {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
+                write!(f, "[toml deserialize error] {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
             }
             Error::ExitStatusError(msg) => {
-                write!(f, "failed to run a command: {}\n\ntry running with verbose flag for more information", msg)
+                write!(f, "[command execution error] {}\n\ntry running with verbose flag for more information", msg)
             }
         }
     }
@@ -154,12 +153,12 @@ impl DeepLookup for Value {
                 Value::Table(t) => match t.get(key) {
                     Some(next) => Ok(next),
                     None => Err(Error::MetadataError(format!(
-                        "failed to lookup toml key [{}]",
+                        "failed to lookup toml key '{}'",
                         ns
                     ))),
                 },
                 _ => Err(Error::MetadataError(format!(
-                    "failed to lookup toml key [{}]",
+                    "failed to lookup toml key '{}'",
                     ns
                 ))),
             },
@@ -250,11 +249,6 @@ pub fn run_cmd(cmd: &mut Command) -> Result<(), Error> {
 
     let status = match cmd.status() {
         Ok(status) => status,
-        Err(ref e) if e.kind() == ErrorKind::NotFound => {
-            return Err(Error::ExitStatusError(format!(
-                "failed to execute command: {}\ndoes the program exist on the system?",
-                e)));
-        }
         Err(e) => {
             return Err(Error::ExitStatusError(format!(
                 "failed to execute the command: {}",
@@ -265,7 +259,7 @@ pub fn run_cmd(cmd: &mut Command) -> Result<(), Error> {
 
     if !status.success() {
         return Err(Error::ExitStatusError(format!(
-            "command did not execute successfully: {}",
+            "command status returned: {}",
             status
         )));
     }
