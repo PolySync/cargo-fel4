@@ -3,7 +3,6 @@ extern crate toml;
 
 use std::fs;
 use std::fs::File;
-use std::path::Path;
 use std::process::Command;
 
 use common::{run_cmd, Error};
@@ -11,16 +10,12 @@ use config::Config;
 use generator::Generator;
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
-    info!("{:#?}", config.pkg_metadata);
-
-    let mut mani_path =
-        Path::new(&config.pkg_metadata.manifest_path).to_path_buf();
-    mani_path.pop();
-    let root_path = mani_path.join("src").join("bin");
-    fs::create_dir_all(&root_path)?;
-    let mut root_file = File::create(root_path.join("root-task.rs").as_path())?;
+    let root_task_path = config.root_dir.join("src").join("bin");
+    fs::create_dir_all(&root_task_path)?;
+    let mut root_file =
+        File::create(root_task_path.join("root-task.rs").as_path())?;
     let mut gen = Generator::new(&mut root_file);
-    gen.generate(&config.pkg_metadata.name)?;
+    gen.generate(&config.pkg_name)?;
 
     let build_type = if config.cli_args.flag_release {
         String::from("release")
@@ -35,7 +30,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     };
 
     let target_build_cache_path = config
-        .target_dir
+        .root_dir
+        .join("target")
         .join(&target_spec)
         .join(&build_type);
 
@@ -45,15 +41,37 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     );
 
     let mut cmd = Command::new("xargo");
+
+    cmd.arg("build");
+
+    if config.cli_args.flag_release {
+        cmd.arg("--release");
+    }
+
+    if config.cli_args.flag_quiet {
+        cmd.arg("--quiet");
+    }
+
+    if config.cli_args.flag_verbose {
+        cmd.arg("--verbose");
+    }
+
+    let targets_path = config
+        .root_dir
+        .join(&config.fel4_metadata.target_specs_path);
+    let artifact_path = config
+        .root_dir
+        .join(&config.fel4_metadata.artifact_path);
+
     run_cmd(
         cmd.current_dir(root_task_path)
             .env(
                 "RUST_TARGET_PATH",
-                &config.helios_metadata.target_specs_path,
+                &config.fel4_metadata.target_specs_path,
             )
             .env(
                 "HELIOS_ARTIFACT_PATH",
-                &config.helios_metadata.artifact_path,
+                &config.fel4_metadata.artifact_path,
             )
             .env("HELIOS_ARTIFACT_PATH", &artifact_path)
             .env("RUST_TARGET_PATH", &targets_path)
@@ -82,7 +100,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     if !sysimg_path.exists() {
         return Err(Error::MetadataError(
             format!("something went wrong with the build, cannot find the system image '{}'",
-            target_build_cache_path.join(&root_task_name).display())
+            target_build_cache_path.join(&sysimg_path).display())
         ));
     }
 

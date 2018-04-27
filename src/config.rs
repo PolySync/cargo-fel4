@@ -1,9 +1,8 @@
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use cargo_metadata;
-use cargo_metadata::Package;
 use docopt::Docopt;
 use toml::Value;
 
@@ -67,8 +66,8 @@ pub struct Fel4Metadata {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub cli_args: CliArgs,
-    pub target_dir: PathBuf,
-    pub pkg_metadata: Package,
+    pub root_dir: PathBuf,
+    pub pkg_name: String,
     pub fel4_metadata: Fel4Metadata,
 }
 
@@ -77,23 +76,29 @@ pub fn gather() -> Result<Config, Error> {
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
-    let (pkg_metadata, target_dir) = {
+    let (pkg_name, root_dir) = {
         let metadata = cargo_metadata::metadata(None)?;
         if metadata.packages.len() != 1 {
             return Err(Error::ConfigError(
                 "a fel4 build requires a singular top-level package",
             ));
         };
-        (
-            metadata.packages[0].clone(),
-            PathBuf::from(metadata.target_directory),
-        )
+        let mut mani_path =
+            Path::new(&metadata.packages[0].manifest_path).to_path_buf();
+        mani_path.pop();
+        let pkg = match metadata.packages.get(0) {
+            Some(p) => p,
+            None => {
+                return Err(Error::ConfigError(
+                    "couldn't retrieve package details",
+                ))
+            }
+        };
+        (pkg.name.clone(), mani_path)
     };
 
     let fel4_metadata = {
-        let mut fel4_conf_path = PathBuf::from(&pkg_metadata.manifest_path);
-        fel4_conf_path.set_file_name("fel4.toml");
-        println!("fel4 path: {:?}", fel4_conf_path);
+        let mut fel4_conf_path = root_dir.join("fel4.toml");
         let mut fel4_conf_file = File::open(fel4_conf_path.as_path())?;
         let mut contents = String::new();
         fel4_conf_file.read_to_string(&mut contents)?;
@@ -103,8 +108,8 @@ pub fn gather() -> Result<Config, Error> {
 
     Ok(Config {
         cli_args,
-        target_dir,
-        pkg_metadata,
+        root_dir,
+        pkg_name,
         fel4_metadata,
     })
 }
