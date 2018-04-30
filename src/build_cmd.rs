@@ -14,8 +14,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     fs::create_dir_all(&root_task_path)?;
     let mut root_file =
         File::create(root_task_path.join("root-task.rs").as_path())?;
-    let mut gen = Generator::new(&mut root_file);
-    gen.generate(&config.pkg_name)?;
+    let mut gen = Generator::new(&mut root_file, config);
+    gen.generate()?;
 
     let build_type = if config.cli_args.flag_release {
         String::from("release")
@@ -23,16 +23,10 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         String::from("debug")
     };
 
-    let target_spec = if config.cli_args.flag_target.is_empty() {
-        config.fel4_metadata.default_target.clone()
-    } else {
-        config.cli_args.flag_target.clone()
-    };
-
     let target_build_cache_path = config
         .root_dir
         .join("target")
-        .join(&target_spec)
+        .join(&config.target)
         .join(&build_type);
 
     info!(
@@ -69,7 +63,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
             .env("FEL4_ARTIFACT_PATH", &artifact_path)
             .env("RUST_TARGET_PATH", &targets_path)
             .arg("--target")
-            .arg(&target_spec),
+            .arg(&config.target),
     )?;
 
     let sysimg_path = config
@@ -91,14 +85,14 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     )?;
 
     if !sysimg_path.exists() {
-        return Err(Error::MetadataError(
+        return Err(Error::ConfigError(
             format!("something went wrong with the build, cannot find the system image '{}'",
             target_build_cache_path.join(&sysimg_path).display())
         ));
     }
 
     if !kernel_path.exists() {
-        return Err(Error::MetadataError(
+        return Err(Error::ConfigError(
             format!("something went wrong with the build, cannot find the kernel file '{}'",
             kernel_path.display())
         ));

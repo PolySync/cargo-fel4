@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use cargo_metadata;
 use docopt::Docopt;
+use log;
+use log::LevelFilter;
 use toml::Value;
 
 use common::Error;
@@ -68,7 +70,30 @@ pub struct Config {
     pub cli_args: CliArgs,
     pub root_dir: PathBuf,
     pub pkg_name: String,
+    pub target: String,
+    pub arch: Arch,
     pub fel4_metadata: Fel4Metadata,
+}
+
+#[derive(Debug, Clone)]
+pub enum Arch {
+    X86,
+    Arm,
+}
+
+impl Arch {
+    fn from_target_str(target: &str) -> Result<Self, Error> {
+        if target.contains("x86_64") {
+            return Ok(Arch::X86);
+        }
+        if target.contains("arm") {
+            return Ok(Arch::Arm);
+        }
+        Err(Error::ConfigError(format!(
+            "could not derive architecture from target str: {}",
+            target
+        )))
+    }
 }
 
 pub fn gather() -> Result<Config, Error> {
@@ -76,12 +101,17 @@ pub fn gather() -> Result<Config, Error> {
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
+    if cli_args.flag_verbose {
+        log::set_max_level(LevelFilter::Info);
+    } else {
+        log::set_max_level(LevelFilter::Error);
+    }
     let (pkg_name, root_dir) = {
         let metadata = cargo_metadata::metadata(None)?;
         if metadata.packages.len() != 1 {
-            return Err(Error::ConfigError(
+            return Err(Error::ConfigError(String::from(
                 "a fel4 build requires a singular top-level package",
-            ));
+            )));
         };
         let mut mani_path =
             Path::new(&metadata.packages[0].manifest_path).to_path_buf();
@@ -89,15 +119,15 @@ pub fn gather() -> Result<Config, Error> {
         let pkg = match metadata.packages.get(0) {
             Some(p) => p,
             None => {
-                return Err(Error::ConfigError(
+                return Err(Error::ConfigError(String::from(
                     "couldn't retrieve package details",
-                ))
+                )))
             }
         };
         (pkg.name.clone(), mani_path)
     };
 
-    let fel4_metadata = {
+    let fel4_metadata: Fel4Metadata = {
         let mut fel4_conf_path = root_dir.join("fel4.toml");
         let mut fel4_conf_file = File::open(fel4_conf_path.as_path())?;
         let mut contents = String::new();
@@ -106,18 +136,27 @@ pub fn gather() -> Result<Config, Error> {
         let fel4_table = match fel4_conf_toml.get("fel4") {
             Some(f) => f,
             None => {
-                return Err(Error::ConfigError(
+                return Err(Error::ConfigError(String::from(
                     "fel4.toml file is missing fel4 section",
-                ))
+                )))
             }
         };
         fel4_table.clone().try_into()?
     };
 
+    let target = if cli_args.flag_target.is_empty() {
+        fel4_metadata.default_target.clone()
+    } else {
+        cli_args.flag_target.clone()
+    };
+    let arch = Arch::from_target_str(&target)?;
+
     Ok(Config {
         cli_args,
         root_dir,
         pkg_name,
+        arch,
+        target,
         fel4_metadata,
     })
 }

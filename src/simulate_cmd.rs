@@ -13,7 +13,7 @@ pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
         .join("simulate");
 
     if !sim_script_path.exists() {
-        return Err(Error::MetadataError(
+        return Err(Error::ConfigError(
         format!("something went wrong with the build, cannot find the simulation script '{}'",
         sim_script_path.display())));
     }

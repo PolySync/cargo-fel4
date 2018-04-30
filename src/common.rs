@@ -10,11 +10,8 @@ use std::process::Command;
 use toml::Value;
 
 pub enum Error {
-    ConfigError(&'static str),
+    ConfigError(String),
     IO(String),
-    MetadataError(String),
-    TomlSerError(String),
-    TomlDeError(String),
     ExitStatusError(String),
 }
 
@@ -26,45 +23,28 @@ impl From<io::Error> for Error {
 
 impl From<cargo_metadata::Error> for Error {
     fn from(e: cargo_metadata::Error) -> Self {
-        Error::MetadataError(format!("{}", e))
+        Error::ConfigError(format!("{}", e))
     }
 }
 
 impl From<toml::ser::Error> for Error {
     fn from(e: toml::ser::Error) -> Self {
-        Error::TomlSerError(format!("{}", e))
+        Error::ConfigError(format!("{}", e))
     }
 }
 
 impl From<toml::de::Error> for Error {
     fn from(e: toml::de::Error) -> Self {
-        Error::TomlDeError(format!("{}", e))
+        Error::ConfigError(format!("{}", e))
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::MetadataError(msg) => write!(
-                f,
-                "[toml metadata error] {}\n\ncheck your project's Cargo.toml [metadata] table(s)",
-                msg
-            ),
-            Error::IO(msg) => write!(f, "IO error: {}", msg),
-            Error::MetadataError(msg) => {
-                write!(f, "[cargo metadata error] {}\n\ncheck your project's Cargo.toml for invalid syntax", msg)
-            }
-            Error::TomlSerError(msg) => {
-                write!(f, "[toml serialize error] {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
-            }
-            Error::TomlDeError(msg) => {
-                write!(f, "[toml deserialize error] {}\n\ncheck your project's Cargo.toml [metadata.helios] table", msg)
-            }
-            Error::ExitStatusError(msg) => {
-                write!(f, "[command execution error] {}\n\ntry running with verbose flag for more information", msg)
-            }
-            Error::ExitStatusError(msg) => write!(f, "command error: {}", msg),
-            Error::ConfigError(msg) => write!(f, "config error: {}", msg),
+            Error::IO(msg) => write!(f, "[IO error] {}", msg),
+            Error::ExitStatusError(msg) => write!(f, "[command error] {}", msg),
+            Error::ConfigError(msg) => write!(f, "[config error] {}\nncheck your project's toml files for invalid syntax", msg)
         }
     }
 }
@@ -109,12 +89,12 @@ impl DeepLookup for Value {
             Ok(v) => match v {
                 Value::Table(t) => match t.get(key) {
                     Some(next) => Ok(next),
-                    None => Err(Error::MetadataError(format!(
+                    None => Err(Error::ConfigError(format!(
                         "failed to lookup toml key '{}'",
                         ns
                     ))),
                 },
-                _ => Err(Error::MetadataError(format!(
+                _ => Err(Error::ConfigError(format!(
                     "failed to lookup toml key '{}'",
                     ns
                 ))),
