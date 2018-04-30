@@ -62,18 +62,11 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let artifact_path = config
         .root_dir
         .join(&config.fel4_metadata.artifact_path);
+    let mani_path = config.root_dir.join("fel4.toml");
 
     run_cmd(
-        cmd.current_dir(root_task_path)
-            .env(
-                "RUST_TARGET_PATH",
-                &config.fel4_metadata.target_specs_path,
-            )
-            .env(
-                "HELIOS_ARTIFACT_PATH",
-                &config.fel4_metadata.artifact_path,
-            )
-            .env("HELIOS_ARTIFACT_PATH", &artifact_path)
+        cmd.env("FEL4_MANIFEST_PATH", &mani_path)
+            .env("FEL4_ARTIFACT_PATH", &artifact_path)
             .env("RUST_TARGET_PATH", &targets_path)
             .arg("--target")
             .arg(&target_spec),

@@ -103,7 +103,15 @@ pub fn gather() -> Result<Config, Error> {
         let mut contents = String::new();
         fel4_conf_file.read_to_string(&mut contents)?;
         let fel4_conf_toml = contents.parse::<Value>()?;
-        fel4_conf_toml.try_into()?
+        let fel4_table = match fel4_conf_toml.get("fel4") {
+            Some(f) => f,
+            None => {
+                return Err(Error::ConfigError(
+                    "fel4.toml file is missing fel4 section",
+                ))
+            }
+        };
+        fel4_table.clone().try_into()?
     };
 
     Ok(Config {
