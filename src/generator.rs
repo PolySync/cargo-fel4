@@ -76,7 +76,7 @@ impl<'a, W: Write> Generator<'a, W> {
         self.write_line(
             "    let untyped = get_untyped(bootinfo, 1 << seL4_TCBBits).unwrap();",
         )?;
-        self.write_line("    let _: u32 = unsafe {")?;
+        self.write_line("    let retype_err: seL4_Error = unsafe {")?;
         self.write_line("        seL4_Untyped_Retype(")?;
         self.write_line("            untyped,")?;
         self.write_line("            api_object_seL4_TCBObject.into(),")?;
@@ -88,7 +88,10 @@ impl<'a, W: Write> Generator<'a, W> {
         self.write_line("            1,")?;
         self.write_line("        )")?;
         self.write_line("    };")?;
-        self.write_line("    let _: u32 = unsafe {")?;
+        self.write_line("    if retype_err != 0 {")?;
+        self.write_line("        debug_halt();")?;
+        self.write_line("    }")?;
+        self.write_line("    let tcb_err: seL4_Error = unsafe {")?;
         self.write_line("        seL4_TCB_Configure(")?;
         self.write_line("            tcb_cap,")?;
         self.write_line("            seL4_CapNull.into(),")?;
@@ -100,6 +103,9 @@ impl<'a, W: Write> Generator<'a, W> {
         self.write_line("            0,")?;
         self.write_line("        )")?;
         self.write_line("    };")?;
+        self.write_line("    if tcb_err != 0 {")?;
+        self.write_line("        debug_halt();")?;
+        self.write_line("    }")?;
         self.write_line(
             "    let stack_base = unsafe { CHILD_STACK as usize };",
         )?;
