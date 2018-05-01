@@ -1,13 +1,25 @@
+#[macro_use]
+extern crate serde_derive;
 extern crate cargo_metadata;
 extern crate colored;
+#[macro_use]
 extern crate log;
+extern crate docopt;
 extern crate toml;
 
 use colored::Colorize;
 use std::fmt;
 use std::io;
 use std::process::Command;
-use toml::Value;
+
+mod build_cmd;
+mod config;
+mod generator;
+mod simulate_cmd;
+
+pub use build_cmd::handle_build_cmd;
+pub use config::{gather as gather_config, Config, SubCommand};
+pub use simulate_cmd::handle_simulate_cmd;
 
 pub enum Error {
     ConfigError(String),
@@ -74,34 +86,6 @@ impl log::Log for Logger {
     }
 
     fn flush(&self) {}
-}
-
-pub trait DeepLookup {
-    /// `lookup` takes a namespace in dot-separated format: `"a.b.c" and uses
-    /// it to traverse a trie-like structure.
-    fn lookup(&self, ns: &str) -> Result<&Self, Error>;
-}
-
-impl DeepLookup for Value {
-    fn lookup(&self, ns: &str) -> Result<&Self, Error> {
-        let ns_iter = ns.split('.');
-        ns_iter.fold(Ok(self), |state, key| match state {
-            Ok(v) => match v {
-                Value::Table(t) => match t.get(key) {
-                    Some(next) => Ok(next),
-                    None => Err(Error::ConfigError(format!(
-                        "failed to lookup toml key '{}'",
-                        ns
-                    ))),
-                },
-                _ => Err(Error::ConfigError(format!(
-                    "failed to lookup toml key '{}'",
-                    ns
-                ))),
-            },
-            Err(e) => Err(e),
-        })
-    }
 }
 
 pub fn run_cmd(cmd: &mut Command) -> Result<(), Error> {

@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use common::Error;
+use super::Error;
 use config::{Arch, Config};
 
 pub struct Generator<'a, 'b, W: Write + 'a> {

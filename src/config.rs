@@ -8,7 +8,7 @@ use log;
 use log::LevelFilter;
 use toml::Value;
 
-use common::Error;
+use super::Error;
 
 const USAGE: &str = "
 Build, manage and simulate Helios feL4 system images
@@ -56,6 +56,44 @@ pub struct CliArgs {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub enum SubCommand {
+    Missing,
+    Build,
+    Simulate,
+    Deploy,
+    Info,
+}
+
+impl SubCommand {
+    /// Converts subcommands to an enum we can match on.
+    pub fn from_cli_args(args: &CliArgs) -> Result<Self, Error> {
+        // fold over the product of the enum variant and its presence in the
+        // cli args.  If it's present, set it as the return type, and increment
+        // our "found" counter.  If it isn't leave the initial state as it was.
+        let out = vec![
+            (SubCommand::Build, args.cmd_build),
+            (SubCommand::Simulate, args.cmd_simulate),
+            (SubCommand::Deploy, args.cmd_deploy),
+            (SubCommand::Info, args.cmd_info),
+        ].iter()
+            .fold((SubCommand::Missing, 0), |state, cmd| {
+                if cmd.1 {
+                    (cmd.0.clone(), state.1 + 1)
+                } else {
+                    state
+                }
+            });
+        // If we found more than one, something is broken.
+        if out.1 > 1 {
+            return Err(Error::ConfigError(String::from(
+                "more than one subcommand was provided",
+            )));
+        }
+        Ok(out.0)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Fel4Metadata {
     #[serde(rename = "artifact-path")]
     pub artifact_path: PathBuf,
@@ -68,6 +106,7 @@ pub struct Fel4Metadata {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub cli_args: CliArgs,
+    pub subcommand: SubCommand,
     pub root_dir: PathBuf,
     pub pkg_name: String,
     pub target: String,
@@ -106,6 +145,7 @@ pub fn gather() -> Result<Config, Error> {
     } else {
         log::set_max_level(LevelFilter::Error);
     }
+
     let (pkg_name, root_dir) = {
         let metadata = cargo_metadata::metadata(None)?;
         if metadata.packages.len() != 1 {
@@ -150,9 +190,11 @@ pub fn gather() -> Result<Config, Error> {
         cli_args.flag_target.clone()
     };
     let arch = Arch::from_target_str(&target)?;
+    let subcommand = SubCommand::from_cli_args(&cli_args)?;
 
     Ok(Config {
         cli_args,
+        subcommand,
         root_dir,
         pkg_name,
         arch,

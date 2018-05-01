@@ -5,7 +5,7 @@ use std::fs;
 use std::fs::File;
 use std::process::Command;
 
-use common::{run_cmd, Error};
+use super::{run_cmd, Error};
 use config::Config;
 use generator::Generator;
 

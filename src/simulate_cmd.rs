@@ -1,9 +1,6 @@
-extern crate cargo_metadata;
-extern crate toml;
-
 use std::process::Command;
 
-use common::{run_cmd, Error};
+use super::{run_cmd, Error};
 use config::Config;
 
 pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
