@@ -21,10 +21,12 @@ impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
         self.write_line("// NOTE: Don't edit it here; your changes will be lost at the next build!")?;
         self.write_line("#![no_std]")?;
         self.write_line("#![feature(global_allocator)]")?;
+        self.write_line("#![feature(alloc)]")?;
         self.write_line("")?;
         self.write_line("extern crate sel4_entry;")?;
         self.write_line("extern crate sel4_sys;")?;
-        self.write_line("extern crate static_heap;")?;
+        self.write_line("extern crate wee_alloc;")?;
+        self.write_line("extern crate alloc;")?;
         self.write_line("")?;
         self.write_line(&format!(
             "extern crate {};",
@@ -33,10 +35,9 @@ impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
         self.write_line("")?;
         self.write_line("use core::mem;")?;
         self.write_line("use sel4_sys::*;")?;
-        self.write_line("use static_heap::*;")?;
         self.write_line("")?;
         self.write_line("#[global_allocator]")?;
-        self.write_line("static ALLOCATOR: StaticAlloc = StaticAlloc {};")?;
+        self.write_line("static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;")?;
         self.write_line("")?;
         self.write_line("// include the seL4 kernel configurations")?;
         self.write_line(
@@ -69,9 +70,6 @@ impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
         self.write_line("    &[0; CHILD_STACK_SIZE];")?;
         self.write_line("")?;
         self.write_line("fn main() {")?;
-        self.write_line(
-            "    unsafe { static_heap::switch_to_static_heap() };",
-        )?;
         self.write_line(
             "    let bootinfo = unsafe { &*sel4_entry::BOOTINFO };",
         )?;
