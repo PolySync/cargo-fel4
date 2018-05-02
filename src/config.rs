@@ -14,7 +14,7 @@ const USAGE: &str = "
 Build, manage and simulate Helios feL4 system images
 
 Usage:
-    cargo fel4 [options] [build | simulate | deploy | info] [<path>]
+    cargo fel4 [options] [build | simulate | deploy | info]
 
 Options:
     -h, --help                   Print this message
@@ -52,7 +52,6 @@ pub struct CliArgs {
     pub cmd_simulate: bool,
     pub cmd_deploy: bool,
     pub cmd_info: bool,
-    pub arg_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

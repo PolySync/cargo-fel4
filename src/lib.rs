@@ -56,7 +56,7 @@ impl fmt::Display for Error {
         match self {
             Error::IO(msg) => write!(f, "[IO error] {}", msg),
             Error::ExitStatusError(msg) => write!(f, "[command error] {}", msg),
-            Error::ConfigError(msg) => write!(f, "[config error] {}\nncheck your project's toml files for invalid syntax", msg)
+            Error::ConfigError(msg) => write!(f, "[config error] {}\ncheck your project's toml files for invalid syntax", msg)
         }
     }
 }
