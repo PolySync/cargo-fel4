@@ -63,31 +63,16 @@ TODO
 
 TODO
 
-## Helios Metadata
-
-The `cargo-fel4` subcommand will look for a `[package.metadata.helios]` table for
-configurations.
+## Metadata Configuration
 
 ```
-[package.metadata.helios]
-# path to package responsible being the root task, empty string means use the current package
-root-task = ""
+[fel4]
+# path where output artifacts are stored, relative to this location
+artifact-path = "images"
 
-# array of paths to external binary executable packages to be linked into the root task binary
-apps = []
+# path where target specifications are located
+target-specs-path = "targets"
 
-# path where output artifacts are stored
-artifact-path = "../images"
-
-# apps[] are intermediately linked via a static library
-apps-lib-name = "fel4_apps"
-
-# command used to build packages
-build-cmd = "xargo"
-
-# path to target specification files
-target-specs-path = "../res/target_specs"
-
-# the default target
-default-target = "x86_64-sel4-helios"
+# the default target to use when `--target <target-triple>` is not specified
+default-target = "x86_64-sel4-fel4"
 ```
