@@ -50,12 +50,17 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         cmd.arg("--verbose");
     }
 
-    // If anything depends on `alloc`, then we seem to be locked
-    // into using whatever features `compiler-builtins` selects.
-    // One of which is the `c` feature, which is why a cross-compiler
-    // is now needed to build the sysroot.
-    // Prevously users were able to control the features in `Xargo.toml`,
-    // however for the time being we are no longer able to do so.
+    // There seems to be an issue with `compiler_builtins` imposing
+    // a default compiler used by the `c` feature/dependency; where
+    // it no longer picks up a sane cross-compiler (when host != target triple).
+    // This results in compiler_builtin_shims being compiled with the
+    // host's default compiler (likely x86_64) rather than using
+    // what our target specification (or even Xargo.toml) has prescribed.
+    //
+    // This fix is a band aid, and will be addressed properly at a later point.
+    // However we can still force/control which cross compiler will
+    // get used to build the shims through the use of CC's envirnoment variables.
+    //
     // See the following issues:
     // `xargo/issues/216`
     // `cargo-fel4/issues/18`
