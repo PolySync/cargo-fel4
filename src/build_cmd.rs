@@ -92,10 +92,31 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         fs::create_dir(&config.fel4_metadata.artifact_path)?;
     }
 
-    fs::copy(
-        target_build_cache_path.join("root-task"),
-        &sysimg_path,
-    )?;
+    // For ARM targets, we currently take advantage of the
+    // seL4 elfloader-tool to bootstrap the system and kick
+    // things off.
+    // To accomplish this, we just re-build libsel4-sys
+    // with an extra environment variable which gives
+    // elfloader-tool a path to the root-task binary
+    if config.target == "arm-sel4-fel4" {
+        run_cmd(
+            cmd.env(
+                "FEL4_ROOT_TASK_IMAGE_PATH",
+                target_build_cache_path.join("root-task"),
+            ).arg("-p")
+                .arg("libsel4-sys"),
+        )?;
+
+        // seL4 CMake rules will just output everything to `kernel`
+        // we copy it so it's consistent with our image name but
+        // won't trigger a rebuild (as it would if we were to move it)
+        fs::copy(&kernel_path, &sysimg_path)?;
+    } else {
+        fs::copy(
+            target_build_cache_path.join("root-task"),
+            &sysimg_path,
+        )?;
+    }
 
     if !sysimg_path.exists() {
         return Err(Error::ConfigError(
