@@ -65,6 +65,7 @@ lazy_static! {
         Regex::new("(^[A-Z][A-Z0-9_]*$)|(^_[A-Z0-9_]+$)").unwrap();
 }
 
+/// Represents a single CMake property
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RawFlag {
     pub key: String,
@@ -72,6 +73,7 @@ pub struct RawFlag {
     pub value: String,
 }
 
+/// The type hint associated with a CMake property
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CMakeType {
     Bool,
@@ -83,12 +85,18 @@ pub enum CMakeType {
     Uninitialized,
 }
 
+/// A pared-down and interpreted representation
+/// of a CMake flag
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SimpleFlag {
     Stringish(Key, String),
     Boolish(Key, bool),
 }
 
+/// A newtype wrapper for the key / property-name
+/// of a CMake flag. Mostly here to avoid confusion
+/// between the similarly-shaped key and value of a
+/// `SimpleFlag::Stringish` variant.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Key(pub String);
 
@@ -131,6 +139,8 @@ impl RawFlag {
 }
 
 impl SimpleFlag {
+    /// Produce code that could be used in a Rust language file
+    /// to represent the flag as a `const` item.
     pub fn generate_rust_const_item(&self) -> Result<RustConstItem, RustCodeGenerationError> {
         match self {
             SimpleFlag::Stringish(Key(k), v) => {
@@ -151,6 +161,7 @@ impl SimpleFlag {
         }
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RustConstItem {
     pub code: String,
@@ -210,6 +221,8 @@ impl CMakeType {
     }
 }
 
+/// The usual things that might go wrong when interpreting
+/// a CMakeCache blob of data
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParseError {
     InvalidTypeHint,
@@ -223,6 +236,11 @@ impl From<IoError> for ParseError {
     }
 }
 
+/// Most generic entry point, intended to interpret a buffered reader
+/// of CMakeCache textual data into the represented flags.
+///
+/// Technically could be formulate-able as returning an iterator, and presently
+/// only uses `Vec` out of convenience.
 pub fn parse_raw<B: BufRead>(b: B) -> Result<Vec<RawFlag>, ParseError> {
     let mut v = Vec::new();
     for line_result in b.lines() {
@@ -234,6 +252,8 @@ pub fn parse_raw<B: BufRead>(b: B) -> Result<Vec<RawFlag>, ParseError> {
     Ok(v)
 }
 
+/// Convenience wrapper around `parse_raw` for reading a CMakeCache.txt file
+/// and handing back either a `Vec` of flags or a very simple error.
 pub fn parse_file_to_raw<P: AsRef<Path>>(file_path: P) -> Result<Vec<RawFlag>, ParseError> {
     parse_raw(BufReader::new(File::open(file_path)?))
 }
