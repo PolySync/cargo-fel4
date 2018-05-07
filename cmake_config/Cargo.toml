@@ -1,0 +1,13 @@
+[package]
+name = "cmake_config"
+version = "0.1.0"
+publish = false
+description = "A parser for CMakeCache.txt files"
+
+[dependencies]
+heck = "0.3"
+lazy_static = "0.1"
+regex = "1"
+
+[dev-dependencies]
+proptest = "0.7"
