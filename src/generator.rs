@@ -23,8 +23,8 @@ impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
         self.write_line("#![feature(global_allocator)]")?;
         self.write_line("#![feature(alloc)]")?;
         self.write_line("")?;
-        self.write_line("extern crate sel4_entry;")?;
         self.write_line("extern crate sel4_sys;")?;
+        self.write_line("extern crate sel4_entry;")?;
         self.write_line("extern crate wee_alloc;")?;
         self.write_line("extern crate alloc;")?;
         self.write_line("")?;
@@ -40,9 +40,13 @@ impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
         self.write_line("static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;")?;
         self.write_line("")?;
         self.write_line("// include the seL4 kernel configurations")?;
-        self.write_line(
-            "include!(concat!(env!(\"OUT_DIR\"), \"/sel4_config.rs\"));",
-        )?;
+        self.write_line(&format!(
+            "include!(\"{}/sel4_config.rs\");",
+            self.config
+                .root_dir
+                .join(&self.config.fel4_metadata.artifact_path)
+                .display(),
+        ))?;
         self.write_line("")?;
         self.write_line("#[cfg(feature = \"KERNEL_DEBUG_BUILD\")]")?;
         self.write_line("#[inline(always)]")?;

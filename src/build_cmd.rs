@@ -3,20 +3,16 @@ extern crate toml;
 
 use std::fs;
 use std::fs::File;
+use std::path::PathBuf;
 use std::process::Command;
+
+use package_config;
 
 use super::{run_cmd, Error};
 use config::Config;
 use generator::Generator;
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
-    let root_task_path = config.root_dir.join("src").join("bin");
-    fs::create_dir_all(&root_task_path)?;
-    let mut root_file =
-        File::create(root_task_path.join("root-task.rs").as_path())?;
-    let mut gen = Generator::new(&mut root_file, config);
-    gen.generate()?;
-
     let build_type = if config.cli_args.flag_release {
         String::from("release")
     } else {
@@ -34,20 +30,20 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         target_build_cache_path,
     );
 
-    let mut cmd = Command::new("xargo");
+    let mut stage_1 = Command::new("xargo");
 
-    cmd.arg("build");
+    stage_1.arg("build");
 
     if config.cli_args.flag_release {
-        cmd.arg("--release");
+        stage_1.arg("--release");
     }
 
     if config.cli_args.flag_quiet {
-        cmd.arg("--quiet");
+        stage_1.arg("--quiet");
     }
 
     if config.cli_args.flag_verbose {
-        cmd.arg("--verbose");
+        stage_1.arg("--verbose");
     }
 
     // There seems to be an issue with `compiler_builtins` imposing
@@ -59,13 +55,14 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     //
     // This fix is a band aid, and will be addressed properly at a later point.
     // However we can still force/control which cross compiler will
-    // get used to build the shims through the use of CC's envirnoment variables.
+    // get used to build the shims through the use of CC's envirnoment
+    // variables.
     //
     // See the following issues:
     // `xargo/issues/216`
     // `cargo-fel4/issues/18`
     if config.target == "arm-sel4-fel4" {
-        cmd.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
+        stage_1.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
     }
 
     let targets_path = config
@@ -77,7 +74,67 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let mani_path = config.root_dir.join("fel4.toml");
 
     run_cmd(
-        cmd.env("FEL4_MANIFEST_PATH", &mani_path)
+        stage_1
+            .env("FEL4_MANIFEST_PATH", &mani_path)
+            .env("FEL4_ARTIFACT_PATH", &artifact_path)
+            .env("RUST_TARGET_PATH", &targets_path)
+            .arg("--target")
+            .arg(&config.target)
+            .arg("-p")
+            .arg("libsel4-sys"),
+    )?;
+
+    package_config::process_cmake_cache(
+        "sel4",
+        Some(PathBuf::from(&artifact_path).join("CMakeCache.txt")),
+        PathBuf::from(&artifact_path),
+    );
+
+    let root_task_path = config.root_dir.join("src").join("bin");
+    fs::create_dir_all(&root_task_path)?;
+    let mut root_file =
+        File::create(root_task_path.join("root-task.rs").as_path())?;
+    let mut gen = Generator::new(&mut root_file, config);
+    gen.generate()?;
+
+    let mut stage_2 = Command::new("xargo");
+
+    stage_2.arg("build");
+
+    if config.cli_args.flag_release {
+        stage_2.arg("--release");
+    }
+
+    if config.cli_args.flag_quiet {
+        stage_2.arg("--quiet");
+    }
+
+    if config.cli_args.flag_verbose {
+        stage_2.arg("--verbose");
+    }
+
+    // There seems to be an issue with `compiler_builtins` imposing
+    // a default compiler used by the `c` feature/dependency; where
+    // it no longer picks up a sane cross-compiler (when host != target triple).
+    // This results in compiler_builtin_shims being compiled with the
+    // host's default compiler (likely x86_64) rather than using
+    // what our target specification (or even Xargo.toml) has prescribed.
+    //
+    // This fix is a band aid, and will be addressed properly at a later point.
+    // However we can still force/control which cross compiler will
+    // get used to build the shims through the use of CC's envirnoment
+    // variables.
+    //
+    // See the following issues:
+    // `xargo/issues/216`
+    // `cargo-fel4/issues/18`
+    if config.target == "arm-sel4-fel4" {
+        stage_2.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
+    }
+
+    run_cmd(
+        stage_2
+            .env("FEL4_MANIFEST_PATH", &mani_path)
             .env("FEL4_ARTIFACT_PATH", &artifact_path)
             .env("RUST_TARGET_PATH", &targets_path)
             .arg("--target")
@@ -105,10 +162,12 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     // elfloader-tool a path to the root-task binary
     if config.target == "arm-sel4-fel4" {
         run_cmd(
-            cmd.env(
-                "FEL4_ROOT_TASK_IMAGE_PATH",
-                target_build_cache_path.join("root-task"),
-            ).arg("-p")
+            stage_2
+                .env(
+                    "FEL4_ROOT_TASK_IMAGE_PATH",
+                    target_build_cache_path.join("root-task"),
+                )
+                .arg("-p")
                 .arg("libsel4-sys"),
         )?;
 
