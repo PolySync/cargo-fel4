@@ -2,6 +2,7 @@ use std::io::Write;
 
 use super::Error;
 use config::{Arch, Config};
+use cmake_codegen::cache_to_rust_file;
 
 pub struct Generator<'a, 'b, W: Write + 'a> {
     writer: &'a mut W,
