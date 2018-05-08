@@ -12,3 +12,4 @@ cargo_metadata = "0.5"
 toml = "0.4"
 log = "0.4"
 colored = "1.6"
+package-config = {git = "ssh://github.com/PolySync/fel4-dependencies.git", branch = "devel"}

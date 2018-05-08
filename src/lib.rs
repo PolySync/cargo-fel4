@@ -5,6 +5,7 @@ extern crate colored;
 #[macro_use]
 extern crate log;
 extern crate docopt;
+extern crate package_config;
 extern crate toml;
 
 use colored::Colorize;
