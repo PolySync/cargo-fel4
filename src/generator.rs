@@ -2,19 +2,21 @@ use std::io::Write;
 
 use super::Error;
 use config::{Arch, Config};
-use cmake_codegen::cache_to_rust_file;
+use cmake_config::RawFlag;
+use cmake_codegen::flags_to_rust_writer;
 
-pub struct Generator<'a, 'b, W: Write + 'a> {
+pub struct Generator<'a, 'b, 'c, W: Write + 'a> {
     writer: &'a mut W,
     config: &'b Config,
+    cmake_flags: &'c [RawFlag]
 }
 
-impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
-    pub fn new(writer: &'a mut W, config: &'b Config) -> Self
+impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
+    pub fn new(writer: &'a mut W, config: &'b Config, cmake_flags: &'c [RawFlag]) -> Self
     where
         W: Write,
     {
-        Self { writer, config }
+        Self { writer, config, cmake_flags }
     }
 
     pub fn generate(&mut self) -> Result<(), Error> {
@@ -41,13 +43,9 @@ impl<'a, 'b, W: Write> Generator<'a, 'b, W> {
         self.write_line("static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;")?;
         self.write_line("")?;
         self.write_line("// include the seL4 kernel configurations")?;
-        self.write_line(&format!(
-            "include!(\"{}/sel4_config.rs\");",
-            self.config
-                .root_dir
-                .join(&self.config.fel4_metadata.artifact_path)
-                .display(),
-        ))?;
+        self.write_line("mod sel4_config {")?;
+        flags_to_rust_writer(self.cmake_flags, self.writer, 4)?;
+        self.write_line("}")?;
         self.write_line("")?;
         self.write_line("#[cfg(feature = \"KERNEL_DEBUG_BUILD\")]")?;
         self.write_line("#[inline(always)]")?;

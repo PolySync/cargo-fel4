@@ -109,31 +109,18 @@ where
     }
 }
 
-impl From<RawFlag> for SimpleFlag {
-    fn from(raw: RawFlag) -> Self {
+impl <'a> From<&'a RawFlag> for SimpleFlag {
+    fn from(raw: &'a RawFlag) -> Self {
         match raw.cmake_type {
             CMakeType::Bool => {
-                SimpleFlag::Boolish(Key(raw.key), interpret_value_as_boolish(raw.value))
+                SimpleFlag::Boolish(Key(raw.key.clone()), interpret_value_as_boolish(raw.value.clone()))
             }
             CMakeType::Path
             | CMakeType::FilePath
             | CMakeType::String
             | CMakeType::Internal
             | CMakeType::Static
-            | CMakeType::Uninitialized => SimpleFlag::Stringish(Key(raw.key), raw.value),
-        }
-    }
-}
-
-impl RawFlag {
-    pub fn legacy_is_likely_boring(&self) -> bool {
-        self.key.starts_with("CMAKE_") || self.key.starts_with("__") || match self.cmake_type {
-            CMakeType::Path
-            | CMakeType::FilePath
-            | CMakeType::Internal
-            | CMakeType::Static
-            | CMakeType::Uninitialized => true,
-            CMakeType::String | CMakeType::Bool => false,
+            | CMakeType::Uninitialized => SimpleFlag::Stringish(Key(raw.key.clone()), raw.value.clone()),
         }
     }
 }
@@ -168,7 +155,7 @@ pub struct RustConstItem {
     pub identifier: String,
 }
 
-fn to_rust_const_identifier<S: AsRef<str>>(s: S) -> Result<String, RustCodeGenerationError> {
+pub fn to_rust_const_identifier<S: AsRef<str>>(s: S) -> Result<String, RustCodeGenerationError> {
     let original_starts_with_underscore = s.as_ref().starts_with('_');
     let mut shouty = s.as_ref().to_shouty_snake_case();
     if original_starts_with_underscore && !shouty.starts_with('_') {
