@@ -4,6 +4,7 @@ extern crate cargo_metadata;
 extern crate colored;
 #[macro_use]
 extern crate log;
+extern crate cmake_config;
 extern crate docopt;
 extern crate toml;
 
@@ -13,6 +14,7 @@ use std::io;
 use std::process::Command;
 
 mod build_cmd;
+mod cmake_codegen;
 mod config;
 mod generator;
 mod simulate_cmd;
@@ -56,7 +58,11 @@ impl fmt::Display for Error {
         match self {
             Error::IO(msg) => write!(f, "[IO error] {}", msg),
             Error::ExitStatusError(msg) => write!(f, "[command error] {}", msg),
-            Error::ConfigError(msg) => write!(f, "[config error] {}\ncheck your project's toml files for invalid syntax", msg)
+            Error::ConfigError(msg) => write!(
+                f,
+                "[config error] {}\ncheck your project's toml files for invalid syntax",
+                msg
+            ),
         }
     }
 }

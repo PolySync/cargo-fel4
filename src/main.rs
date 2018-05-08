@@ -8,10 +8,7 @@ static LOGGER: Logger = Logger;
 
 fn main() {
     if let Err(e) = log::set_logger(&LOGGER) {
-        error!(
-            "there was an error initializing the logger:\n{}",
-            e
-        );
+        error!("there was an error initializing the logger:\n{}", e);
 
         return;
     };
