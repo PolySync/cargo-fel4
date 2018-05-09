@@ -37,7 +37,7 @@ let raw = RawFlag {
           cmake_type: CMakeType::Bool,
           value: "ON".into(),
 };
-let simplified = SimpleFlag::from(raw);
+let simplified = SimpleFlag::from(&raw);
 assert_eq!(SimpleFlag::Boolish(Key("FOO".into()), true), simplified);
 ```
 
@@ -45,24 +45,24 @@ assert_eq!(SimpleFlag::Boolish(Key("FOO".into()), true), simplified);
 which produces the text of a Rust-lang const definition for that flag.
 
 */
-extern crate heck;
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
+extern crate syn;
 
 #[cfg(test)]
 #[macro_use]
 extern crate proptest;
 
-use heck::ShoutySnakeCase;
 use regex::Regex;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error as IoError};
 use std::path::Path;
+use syn::{parse_str, Expr, ExprLit, Lit};
 
 lazy_static! {
-    static ref RUST_CONST_IDENTIFIER_REGEX: Regex =
-        Regex::new("(^[A-Z][A-Z0-9_]*$)|(^_[A-Z0-9_]+$)").unwrap();
+    static ref RUST_VALID_IDENTIFIER_REGEX: Regex =
+        Regex::new("(^[a-zA-Z][a-zA-Z0-9_]*$)|(^_[a-zA-Z0-9_]+$)").unwrap();
 }
 
 /// Represents a single CMake property
@@ -109,18 +109,21 @@ where
     }
 }
 
-impl <'a> From<&'a RawFlag> for SimpleFlag {
+impl<'a> From<&'a RawFlag> for SimpleFlag {
     fn from(raw: &'a RawFlag) -> Self {
         match raw.cmake_type {
-            CMakeType::Bool => {
-                SimpleFlag::Boolish(Key(raw.key.clone()), interpret_value_as_boolish(raw.value.clone()))
-            }
+            CMakeType::Bool => SimpleFlag::Boolish(
+                Key(raw.key.clone()),
+                interpret_value_as_boolish(raw.value.clone()),
+            ),
             CMakeType::Path
             | CMakeType::FilePath
             | CMakeType::String
             | CMakeType::Internal
             | CMakeType::Static
-            | CMakeType::Uninitialized => SimpleFlag::Stringish(Key(raw.key.clone()), raw.value.clone()),
+            | CMakeType::Uninitialized => {
+                SimpleFlag::Stringish(Key(raw.key.clone()), raw.value.clone())
+            }
         }
     }
 }
@@ -131,18 +134,34 @@ impl SimpleFlag {
     pub fn generate_rust_const_item(&self) -> Result<RustConstItem, RustCodeGenerationError> {
         match self {
             SimpleFlag::Stringish(Key(k), v) => {
-                let id = to_rust_const_identifier(k)?;
+                if !is_valid_rust_identifier(&k) {
+                    return Err(RustCodeGenerationError::InvalidIdentifier(k.clone()));
+                }
+                let literal = format!("\"{}\"", &v);
+                let valid_literal = match parse_str::<Expr>(&literal) {
+                    Ok(Expr::Lit(ExprLit {
+                        attrs: _,
+                        lit: Lit::Str(_),
+                    })) => true,
+                    _ => false,
+                };
+                // TODO - consider applying string escaping as a fallback?
+                if !valid_literal {
+                    return Err(RustCodeGenerationError::InvalidStringLiteral(v.clone()));
+                }
+                let code = format!("pub const {}:&'static str = {};", &k, &literal);
                 Ok(RustConstItem {
-                    // TODO - consider enhancing robustness of string escaping
-                    code: format!("pub const {}:&'static str = \"{}\";", &id, v),
-                    identifier: id,
+                    code: code,
+                    identifier: k.clone(),
                 })
             }
             SimpleFlag::Boolish(Key(k), v) => {
-                let id = to_rust_const_identifier(k)?;
+                if !is_valid_rust_identifier(&k) {
+                    return Err(RustCodeGenerationError::InvalidIdentifier(k.clone()));
+                }
                 Ok(RustConstItem {
-                    code: format!("pub const {}:bool = {};", &id, v),
-                    identifier: id,
+                    code: format!("pub const {}:bool = {};", &k, v),
+                    identifier: k.clone(),
                 })
             }
         }
@@ -155,22 +174,16 @@ pub struct RustConstItem {
     pub identifier: String,
 }
 
-pub fn to_rust_const_identifier<S: AsRef<str>>(s: S) -> Result<String, RustCodeGenerationError> {
-    let original_starts_with_underscore = s.as_ref().starts_with('_');
-    let mut shouty = s.as_ref().to_shouty_snake_case();
-    if original_starts_with_underscore && !shouty.starts_with('_') {
-        shouty.insert(0, '_');
-    }
-    if RUST_CONST_IDENTIFIER_REGEX.is_match(&shouty) {
-        Ok(shouty)
-    } else {
-        Err(RustCodeGenerationError::InvalidIdentifier(shouty))
-    }
+/// Convenience function determining if a string is usable without alteration
+/// as a Rust identifier for an item.
+pub fn is_valid_rust_identifier<S: AsRef<str>>(s: S) -> bool {
+    RUST_VALID_IDENTIFIER_REGEX.is_match(s.as_ref())
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RustCodeGenerationError {
     InvalidIdentifier(String),
+    InvalidStringLiteral(String),
 }
 
 pub fn interpret_value_as_boolish<S: AsRef<str>>(s: S) -> bool {
@@ -304,44 +317,26 @@ mod tests {
 
     #[test]
     fn sanity_check_bool_const_ok() {
-        let expected = Ok(RustConstItem {
-            code: "pub const HELLO_WORLD:bool = false;".to_string(),
-            identifier: "HELLO_WORLD".to_string(),
-        });
         assert_eq!(
-            expected,
+            Ok(RustConstItem {
+                code: "pub const HELLO_WORLD:bool = false;".to_string(),
+                identifier: "HELLO_WORLD".to_string(),
+            }),
             SimpleFlag::Boolish(Key("HELLO_WORLD".to_string()), false).generate_rust_const_item()
         );
         assert_eq!(
-            expected,
+            Ok(RustConstItem {
+                code: "pub const helloWorld:bool = false;".to_string(),
+                identifier: "helloWorld".to_string(),
+            }),
             SimpleFlag::Boolish(Key("helloWorld".to_string()), false).generate_rust_const_item()
         );
         assert_eq!(
-            expected,
+            Ok(RustConstItem {
+                code: "pub const hello_world:bool = false;".to_string(),
+                identifier: "hello_world".to_string(),
+            }),
             SimpleFlag::Boolish(Key("hello_world".to_string()), false).generate_rust_const_item()
-        );
-    }
-    #[test]
-    fn bool_constification_strips_excessive_leading_underscores() {
-        let expected = Ok(RustConstItem {
-            code: "pub const _HELLO:bool = false;".to_string(),
-            identifier: "_HELLO".to_string(),
-        });
-        assert_eq!(
-            expected,
-            SimpleFlag::Boolish(Key("_HELLO".to_string()), false).generate_rust_const_item()
-        );
-        assert_eq!(
-            expected,
-            SimpleFlag::Boolish(Key("_hello".to_string()), false).generate_rust_const_item()
-        );
-        assert_eq!(
-            expected,
-            SimpleFlag::Boolish(Key("__hello".to_string()), false).generate_rust_const_item()
-        );
-        assert_eq!(
-            expected,
-            SimpleFlag::Boolish(Key("___hello".to_string()), false).generate_rust_const_item()
         );
     }
 
@@ -363,24 +358,57 @@ mod tests {
 
     #[test]
     fn sanity_check_str_const() {
-        let expected = Ok(RustConstItem {
-            code: "pub const HELLO_WORLD:&'static str = \"whatever\";".to_string(),
-            identifier: "HELLO_WORLD".to_string(),
-        });
         assert_eq!(
-            expected,
+            Ok(RustConstItem {
+                code: "pub const HELLO_WORLD:&'static str = \"whatever\";".to_string(),
+                identifier: "HELLO_WORLD".to_string(),
+            }),
             SimpleFlag::Stringish(Key("HELLO_WORLD".to_string()), "whatever".to_string())
                 .generate_rust_const_item()
         );
         assert_eq!(
-            expected,
+            Ok(RustConstItem {
+                code: "pub const helloWorld:&'static str = \"whatever\";".to_string(),
+                identifier: "helloWorld".to_string(),
+            }),
             SimpleFlag::Stringish(Key("helloWorld".to_string()), "whatever".to_string())
                 .generate_rust_const_item()
         );
         assert_eq!(
-            expected,
+            Ok(RustConstItem {
+                code: "pub const hello_world:&'static str = \"whatever\";".to_string(),
+                identifier: "hello_world".to_string(),
+            }),
             SimpleFlag::Stringish(Key("hello_world".to_string()), "whatever".to_string())
                 .generate_rust_const_item()
+        );
+    }
+
+    #[test]
+    fn sanity_check_str_const_id_error() {
+        assert_eq!(
+            Err(RustCodeGenerationError::InvalidIdentifier("_".into())),
+            SimpleFlag::Stringish(Key("_".to_string()), "a".into()).generate_rust_const_item()
+        );
+        assert_eq!(
+            Err(RustCodeGenerationError::InvalidIdentifier("0".into())),
+            SimpleFlag::Stringish(Key("0".to_string()), "a".into()).generate_rust_const_item()
+        );
+        assert_eq!(
+            Err(RustCodeGenerationError::InvalidIdentifier("0ABC".into())),
+            SimpleFlag::Stringish(Key("0ABC".to_string()), "a".into()).generate_rust_const_item()
+        );
+    }
+
+    #[test]
+    fn sanity_check_str_const_literal_error() {
+        assert_eq!(
+            Err(RustCodeGenerationError::InvalidStringLiteral("\\".into())),
+            SimpleFlag::Stringish(Key("a".to_string()), "\\".into()).generate_rust_const_item()
+        );
+        assert_eq!(
+            Err(RustCodeGenerationError::InvalidStringLiteral("\"".into())),
+            SimpleFlag::Stringish(Key("a".to_string()), "\"".into()).generate_rust_const_item()
         );
     }
 
@@ -405,7 +433,7 @@ mod tests {
     prop_compose! {
         fn arb_raw_flag()(ref key in arb_valid_rustificable_key(),
                           ref t in arb_cmake_type(),
-                          ref val in r"[^\s:=#/]*") -> RawFlag {
+                          ref val in "[^\\s:=#/\"\\\\]*") -> RawFlag {
             RawFlag {
                key: key.to_string(),
                cmake_type: t.clone(),
@@ -416,7 +444,7 @@ mod tests {
 
     prop_compose! {
         fn arb_simple_flag()(ref raw_flag in arb_raw_flag()) -> SimpleFlag {
-            SimpleFlag::from(raw_flag.clone())
+            SimpleFlag::from(raw_flag)
         }
     }
 
@@ -436,13 +464,8 @@ mod tests {
         }
 
         #[test]
-        fn arbitrary_raw_flag_is_boring_checkable_without_panic(ref raw_flag in arb_raw_flag()) {
-            raw_flag.legacy_is_likely_boring();
-        }
-
-        #[test]
         fn arbitrary_valid_raw_refinable(ref raw_flag in arb_raw_flag()) {
-            let f:SimpleFlag = SimpleFlag::from(raw_flag.clone());
+            let f:SimpleFlag = SimpleFlag::from(raw_flag);
             if raw_flag.cmake_type == CMakeType::Bool {
                 if let SimpleFlag::Boolish(k, _) = f {
                     assert_eq!(Key(raw_flag.key.clone()), k);

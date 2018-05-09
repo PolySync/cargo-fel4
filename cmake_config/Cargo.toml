@@ -5,9 +5,9 @@ publish = false
 description = "A parser for CMakeCache.txt files"
 
 [dependencies]
-heck = "0.3"
 lazy_static = "0.1"
 regex = "1"
+syn = "0.13"
 
 [dev-dependencies]
 proptest = "0.7"
