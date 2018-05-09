@@ -107,6 +107,7 @@ pub struct Config {
     pub cli_args: CliArgs,
     pub subcommand: SubCommand,
     pub root_dir: PathBuf,
+    /// The end user application's package name
     pub pkg_name: String,
     pub target: String,
     pub arch: Arch,

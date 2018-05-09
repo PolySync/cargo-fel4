@@ -1,11 +1,11 @@
 use cmake_config::*;
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::Path;
+use super::Error;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CMakeCodegenError {
-    ReadIoError,
     ParseError(ParseError),
     GenerationError(RustCodeGenerationError),
     DuplicateIdentifiers(String),
@@ -40,29 +40,9 @@ pub fn cache_to_interesting_flags<P: AsRef<Path>>(
     Ok(filter_to_interesting_flags(all_flags))
 }
 
-pub fn cache_to_rust_file<P: AsRef<Path>>(
-    cmake_cache_path: P,
-    output_rust_file_path: P,
-) -> Result<(), CMakeCodegenError> {
-    flags_to_rust_file(cache_to_interesting_flags(cmake_cache_path)?, output_rust_file_path)
-}
-
-pub fn flags_to_rust_file<I, P: AsRef<Path>>(
-    flags: I,
-    output_rust_file_path: P,
-) -> Result<(), CMakeCodegenError>
+pub fn flags_to_rust_writer<'a, I, W: Write>(flags: I, writer: &mut W, indent_spaces: usize) -> Result<(), CMakeCodegenError>
 where
-    I: IntoIterator<Item = RawFlag>,
-{
-    let out_file =
-        File::create(&output_rust_file_path).map_err(|_| CMakeCodegenError::WriteIoError)?;
-    let writer = BufWriter::new(out_file);
-    flags_to_rust_writer(flags, writer)
-}
-
-pub fn flags_to_rust_writer<I, W: Write>(flags: I, mut writer: W) -> Result<(), CMakeCodegenError>
-where
-    I: IntoIterator<Item = RawFlag>,
+    I: IntoIterator<Item = &'a RawFlag>,
 {
     let mut identifiers: HashSet<String> = HashSet::new();
     for flag in flags {
@@ -73,9 +53,55 @@ where
         } else {
             identifiers.insert(identifier);
         }
-        writeln!(writer, "{}", code).map_err(|_| CMakeCodegenError::WriteIoError)?;
+        writeln!(writer, "{:indent$}{}", "", code, indent=indent_spaces)
+            .map_err(|_| CMakeCodegenError::WriteIoError)?;
     }
     Ok(())
+}
+
+pub fn truthy_boolean_flags_as_rust_identifiers<'a, I>(flags: I) -> Result<Vec<String>, CMakeCodegenError>
+    where
+        I: IntoIterator<Item = &'a RawFlag>,
+{
+    let mut out = Vec::new();
+    for active_cmake_bool_prop in flags.into_iter()
+        .filter(|f| f.cmake_type == CMakeType::Bool)
+        .map(SimpleFlag::from)
+        .filter_map(|f| match f {
+            SimpleFlag::Stringish(_, _) => None,
+            SimpleFlag::Boolish(Key(_), false) => None,
+            SimpleFlag::Boolish(Key(k), true) => Some(k)
+        }) {
+        let rust_name = to_rust_const_identifier(active_cmake_bool_prop)?;
+        out.push(rust_name)
+    }
+    Ok(out)
+}
+impl From<CMakeCodegenError> for Error {
+    fn from(c: CMakeCodegenError) -> Self {
+        match c {
+            CMakeCodegenError::ParseError(p) => {
+                match p {
+                    ParseError::IoFailure => Error::ExitStatusError("Failed to read CMakeCache.txt file".into()),
+                    ParseError::InvalidTypeHint=> Error::ExitStatusError("Invalid type hint in CMakeCache.txt file".into()),
+                    ParseError::PropertyMissingKeyTypeValueTriple => Error::ExitStatusError("Invalid property definition in CMakeCache.txt file".into()),
+                }
+            },
+            CMakeCodegenError::GenerationError(r) => {
+                match r {
+                    RustCodeGenerationError::InvalidIdentifier(s) => {
+                        Error::ExitStatusError(format!("Invalid identifier interpreted from CMakeCache.txt: {}", s))
+                    },
+                }
+            },
+            CMakeCodegenError::DuplicateIdentifiers(i) => {
+                Error::ExitStatusError(format!("Duplicate identifiers generated in rust config from CMakeCache.txt: {}", i))
+            },
+            CMakeCodegenError::WriteIoError => {
+                Error::ExitStatusError("Failure to write out generated rust config.".into())
+            },
+        }
+    }
 }
 
 #[cfg(test)]
@@ -86,4 +112,24 @@ mod tests {
     // TODO - test happy path
     // TODO - test CMAKE_ filtration
     // TODO - test uninteresting CMakeType filtration
+    // TODO - test truthy feature flag filtration
+    use super::*;
+    use std::str;
+    #[test]
+    fn indentation_control() {
+        let f = RawFlag {
+            key: "A".into(),
+            cmake_type: CMakeType::Bool,
+            value: "ON".into(),
+        };
+        let mut a: Vec<u8> = Vec::new();
+        flags_to_rust_writer(&[f.clone()], &mut a, 0).expect("Oh no");
+        assert_eq!("pub const A:bool = true;\n", str::from_utf8(&a).unwrap());
+
+
+        let mut b: Vec<u8> = Vec::new();
+        flags_to_rust_writer(&[f.clone()], &mut b, 4).expect("Oh no");
+        assert_eq!("    pub const A:bool = true;\n", str::from_utf8(&b).unwrap());
+    }
 }
+

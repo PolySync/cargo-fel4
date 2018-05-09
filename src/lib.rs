@@ -6,7 +6,6 @@ extern crate colored;
 extern crate log;
 extern crate cmake_config;
 extern crate docopt;
-extern crate package_config;
 extern crate toml;
 
 use colored::Colorize;
@@ -61,7 +60,7 @@ impl fmt::Display for Error {
             Error::ExitStatusError(msg) => write!(f, "[command error] {}", msg),
             Error::ConfigError(msg) => write!(
                 f,
-                "[config error] {}\ncheck your project's toml files for invalid syntax",
+                "[config error] {}\n\nCheck your project's toml files for invalid syntax",
                 msg
             ),
         }

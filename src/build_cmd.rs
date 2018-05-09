@@ -3,14 +3,12 @@ extern crate toml;
 
 use std::fs;
 use std::fs::File;
-use std::path::PathBuf;
 use std::process::Command;
-
-use package_config;
 
 use super::{run_cmd, Error};
 use config::Config;
 use generator::Generator;
+use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let build_type = if config.cli_args.flag_release {
@@ -83,23 +81,22 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
             .arg("-p")
             .arg("libsel4-sys"),
     )?;
-
-    package_config::process_cmake_cache(
-        "sel4",
-        Some(PathBuf::from(&artifact_path).join("CMakeCache.txt")),
-        PathBuf::from(&artifact_path),
-    );
+    let interesting_flags = cache_to_interesting_flags(config
+        .root_dir
+        .join(&config.fel4_metadata.artifact_path)
+        .join("CMakeCache.txt"))?;
 
     let root_task_path = config.root_dir.join("src").join("bin");
     fs::create_dir_all(&root_task_path)?;
     let mut root_file =
         File::create(root_task_path.join("root-task.rs").as_path())?;
-    let mut gen = Generator::new(&mut root_file, config);
+    let mut gen = Generator::new(&mut root_file, config, &interesting_flags);
     gen.generate()?;
 
     let mut stage_2 = Command::new("xargo");
 
-    stage_2.arg("build");
+    stage_2.arg("rustc").arg("--bin").arg("root-task");
+
 
     if config.cli_args.flag_release {
         stage_2.arg("--release");
@@ -112,6 +109,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     if config.cli_args.flag_verbose {
         stage_2.arg("--verbose");
     }
+
+
 
     // There seems to be an issue with `compiler_builtins` imposing
     // a default compiler used by the `c` feature/dependency; where
@@ -132,13 +131,23 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         stage_2.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
     }
 
+    stage_2.arg("--target")
+           .arg(&config.target);
+
+    let truthy_cmake_feature_flags = truthy_boolean_flags_as_rust_identifiers(&interesting_flags)?;
+    if !truthy_cmake_feature_flags.is_empty() {
+        stage_2.arg("--");
+        for feature in truthy_cmake_feature_flags {
+            stage_2.arg("--cfg");
+            stage_2.arg(format!("feature=\"{}\"", feature));
+        }
+    }
+
     run_cmd(
         stage_2
             .env("FEL4_MANIFEST_PATH", &mani_path)
             .env("FEL4_ARTIFACT_PATH", &artifact_path)
             .env("RUST_TARGET_PATH", &targets_path)
-            .arg("--target")
-            .arg(&config.target),
     )?;
 
     let sysimg_path = config
@@ -149,6 +158,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         .fel4_metadata
         .artifact_path
         .join("kernel");
+
 
     if !config.fel4_metadata.artifact_path.exists() {
         fs::create_dir(&config.fel4_metadata.artifact_path)?;
