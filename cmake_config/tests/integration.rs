@@ -12,8 +12,8 @@ fn sanity_check_direct_from_string() {
 
     let v: Vec<SimpleFlag> = cmake_config::parse_raw(reader)
         .expect("Could not parse content")
-        .into_iter()
-        .map(|raw_flag| SimpleFlag::from(raw_flag))
+        .iter()
+        .map(SimpleFlag::from)
         .collect();
 
     assert_eq!(
@@ -71,9 +71,7 @@ fn sanity_check_tiny_file_parsing() {
         v
     );
 
-    let simplified: Vec<SimpleFlag> = v.into_iter()
-        .map(|raw_flag| SimpleFlag::from(raw_flag))
-        .collect();
+    let simplified: Vec<SimpleFlag> = v.iter().map(SimpleFlag::from).collect();
 
     assert_eq!(
         vec![

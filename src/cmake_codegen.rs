@@ -72,8 +72,10 @@ pub fn truthy_boolean_flags_as_rust_identifiers<'a, I>(flags: I) -> Result<Vec<S
             SimpleFlag::Boolish(Key(_), false) => None,
             SimpleFlag::Boolish(Key(k), true) => Some(k)
         }) {
-        let rust_name = to_rust_const_identifier(active_cmake_bool_prop)?;
-        out.push(rust_name)
+        if !is_valid_rust_identifier(&active_cmake_bool_prop) {
+            return Err(CMakeCodegenError::GenerationError(RustCodeGenerationError::InvalidIdentifier(active_cmake_bool_prop)));
+        }
+        out.push(active_cmake_bool_prop)
     }
     Ok(out)
 }
@@ -92,6 +94,9 @@ impl From<CMakeCodegenError> for Error {
                     RustCodeGenerationError::InvalidIdentifier(s) => {
                         Error::ExitStatusError(format!("Invalid identifier interpreted from CMakeCache.txt: {}", s))
                     },
+                    RustCodeGenerationError::InvalidStringLiteral(s) => {
+                        Error::ExitStatusError(format!("Invalid Rust string literal generated from a value in CMakeCache.txt: {}", s))
+                    }
                 }
             },
             CMakeCodegenError::DuplicateIdentifiers(i) => {

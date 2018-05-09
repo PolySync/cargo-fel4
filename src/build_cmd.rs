@@ -6,9 +6,10 @@ use std::fs::File;
 use std::process::Command;
 
 use super::{run_cmd, Error};
+use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
 use config::Config;
 use generator::Generator;
-use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
+use heck::ShoutySnakeCase;
 
 pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let build_type = if config.cli_args.flag_release {
@@ -140,6 +141,10 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
         for feature in truthy_cmake_feature_flags {
             stage_2.arg("--cfg");
             stage_2.arg(format!("feature=\"{}\"", feature));
+
+            // TODO - remove once libsel4-sys updates its feature-flag casing for the temporary debug shim
+            stage_2.arg("--cfg");
+            stage_2.arg(format!("feature=\"{}\"", feature.to_shouty_snake_case()));
         }
     }
 

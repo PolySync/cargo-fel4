@@ -35,6 +35,7 @@ dependencies = [
  "cmake_config 0.1.0",
  "colored 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "heck 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -67,9 +68,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "cmake_config"
 version = "0.1.0"
 dependencies = [
- "heck 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.13.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
