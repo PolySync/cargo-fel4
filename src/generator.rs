@@ -43,7 +43,8 @@ impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
         self.write_line("static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;")?;
         self.write_line("")?;
         self.write_line("// include the seL4 kernel configurations")?;
-        self.write_line("mod sel4_config {")?;
+        self.write_line("#[allow(dead_code)]")?;
+        self.write_line("pub mod sel4_config {")?;
         flags_to_rust_writer(self.cmake_flags, self.writer, 4)?;
         self.write_line("}")?;
         self.write_line("")?;
