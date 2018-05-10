@@ -1,8 +1,8 @@
+use super::Error;
 use cmake_config::*;
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
-use super::Error;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CMakeCodegenError {
@@ -34,13 +34,17 @@ where
         .collect()
 }
 pub fn cache_to_interesting_flags<P: AsRef<Path>>(
-    cmake_cache_path: P
+    cmake_cache_path: P,
 ) -> Result<Vec<RawFlag>, CMakeCodegenError> {
     let all_flags = parse_file_to_raw(cmake_cache_path)?;
     Ok(filter_to_interesting_flags(all_flags))
 }
 
-pub fn flags_to_rust_writer<'a, I, W: Write>(flags: I, writer: &mut W, indent_spaces: usize) -> Result<(), CMakeCodegenError>
+pub fn flags_to_rust_writer<'a, I, W: Write>(
+    flags: I,
+    writer: &mut W,
+    indent_spaces: usize,
+) -> Result<(), CMakeCodegenError>
 where
     I: IntoIterator<Item = &'a RawFlag>,
 {
@@ -53,27 +57,32 @@ where
         } else {
             identifiers.insert(identifier);
         }
-        writeln!(writer, "{:indent$}{}", "", code, indent=indent_spaces)
+        writeln!(writer, "{:indent$}{}", "", code, indent = indent_spaces)
             .map_err(|_| CMakeCodegenError::WriteIoError)?;
     }
     Ok(())
 }
 
-pub fn truthy_boolean_flags_as_rust_identifiers<'a, I>(flags: I) -> Result<Vec<String>, CMakeCodegenError>
-    where
-        I: IntoIterator<Item = &'a RawFlag>,
+pub fn truthy_boolean_flags_as_rust_identifiers<'a, I>(
+    flags: I,
+) -> Result<Vec<String>, CMakeCodegenError>
+where
+    I: IntoIterator<Item = &'a RawFlag>,
 {
     let mut out = Vec::new();
-    for active_cmake_bool_prop in flags.into_iter()
+    for active_cmake_bool_prop in flags
+        .into_iter()
         .filter(|f| f.cmake_type == CMakeType::Bool)
         .map(SimpleFlag::from)
         .filter_map(|f| match f {
             SimpleFlag::Stringish(_, _) => None,
             SimpleFlag::Boolish(Key(_), false) => None,
-            SimpleFlag::Boolish(Key(k), true) => Some(k)
+            SimpleFlag::Boolish(Key(k), true) => Some(k),
         }) {
         if !is_valid_rust_identifier(&active_cmake_bool_prop) {
-            return Err(CMakeCodegenError::GenerationError(RustCodeGenerationError::InvalidIdentifier(active_cmake_bool_prop)));
+            return Err(CMakeCodegenError::GenerationError(
+                RustCodeGenerationError::InvalidIdentifier(active_cmake_bool_prop),
+            ));
         }
         out.push(active_cmake_bool_prop)
     }
@@ -82,29 +91,36 @@ pub fn truthy_boolean_flags_as_rust_identifiers<'a, I>(flags: I) -> Result<Vec<S
 impl From<CMakeCodegenError> for Error {
     fn from(c: CMakeCodegenError) -> Self {
         match c {
-            CMakeCodegenError::ParseError(p) => {
-                match p {
-                    ParseError::IoFailure => Error::ExitStatusError("Failed to read CMakeCache.txt file".into()),
-                    ParseError::InvalidTypeHint=> Error::ExitStatusError("Invalid type hint in CMakeCache.txt file".into()),
-                    ParseError::PropertyMissingKeyTypeValueTriple => Error::ExitStatusError("Invalid property definition in CMakeCache.txt file".into()),
+            CMakeCodegenError::ParseError(p) => match p {
+                ParseError::IoFailure => {
+                    Error::ExitStatusError("Failed to read CMakeCache.txt file".into())
+                }
+                ParseError::InvalidTypeHint => {
+                    Error::ExitStatusError("Invalid type hint in CMakeCache.txt file".into())
+                }
+                ParseError::PropertyMissingKeyTypeValueTriple => Error::ExitStatusError(
+                    "Invalid property definition in CMakeCache.txt file".into(),
+                ),
+            },
+            CMakeCodegenError::GenerationError(r) => match r {
+                RustCodeGenerationError::InvalidIdentifier(s) => Error::ExitStatusError(format!(
+                    "Invalid identifier interpreted from CMakeCache.txt: {}",
+                    s
+                )),
+                RustCodeGenerationError::InvalidStringLiteral(s) => {
+                    Error::ExitStatusError(format!(
+                        "Invalid Rust string literal generated from a value in CMakeCache.txt: {}",
+                        s
+                    ))
                 }
             },
-            CMakeCodegenError::GenerationError(r) => {
-                match r {
-                    RustCodeGenerationError::InvalidIdentifier(s) => {
-                        Error::ExitStatusError(format!("Invalid identifier interpreted from CMakeCache.txt: {}", s))
-                    },
-                    RustCodeGenerationError::InvalidStringLiteral(s) => {
-                        Error::ExitStatusError(format!("Invalid Rust string literal generated from a value in CMakeCache.txt: {}", s))
-                    }
-                }
-            },
-            CMakeCodegenError::DuplicateIdentifiers(i) => {
-                Error::ExitStatusError(format!("Duplicate identifiers generated in rust config from CMakeCache.txt: {}", i))
-            },
+            CMakeCodegenError::DuplicateIdentifiers(i) => Error::ExitStatusError(format!(
+                "Duplicate identifiers generated in rust config from CMakeCache.txt: {}",
+                i
+            )),
             CMakeCodegenError::WriteIoError => {
                 Error::ExitStatusError("Failure to write out generated rust config.".into())
-            },
+            }
         }
     }
 }
@@ -131,10 +147,11 @@ mod tests {
         flags_to_rust_writer(&[f.clone()], &mut a, 0).expect("Oh no");
         assert_eq!("pub const A:bool = true;\n", str::from_utf8(&a).unwrap());
 
-
         let mut b: Vec<u8> = Vec::new();
         flags_to_rust_writer(&[f.clone()], &mut b, 4).expect("Oh no");
-        assert_eq!("    pub const A:bool = true;\n", str::from_utf8(&b).unwrap());
+        assert_eq!(
+            "    pub const A:bool = true;\n",
+            str::from_utf8(&b).unwrap()
+        );
     }
 }
-
