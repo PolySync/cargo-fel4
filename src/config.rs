@@ -153,8 +153,7 @@ pub fn gather() -> Result<Config, Error> {
                 "a fel4 build requires a singular top-level package",
             )));
         };
-        let mut mani_path =
-            Path::new(&metadata.packages[0].manifest_path).to_path_buf();
+        let mut mani_path = Path::new(&metadata.packages[0].manifest_path).to_path_buf();
         mani_path.pop();
         let pkg = match metadata.packages.get(0) {
             Some(p) => p,
