@@ -3,6 +3,7 @@ extern crate toml;
 
 use std::borrow::Borrow;
 use std::env;
+use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::path::Path;
 use std::process::Command;
@@ -41,9 +42,9 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     run_cmd(&mut libsel4_build)?;
 
     // Extract the resolved CMake config details and filter down to ones that might be useful
-    // TODO - once we can treat the fel4.toml configuration values as canonical,
     // we can move the flag extraction to before the libsel4_build and apply the feature flags
     // on the very first build!
+    // TODO - once we can treat the fel4.toml configuration values as canonical,
     let interesting_flags = cache_to_interesting_flags(
         config
             .root_dir
@@ -86,8 +87,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
                     "FEL4_ROOT_TASK_IMAGE_PATH",
                     target_build_cache_path.join("root-task"),
                 )
-                .arg("-p")
-                .arg("libsel4-sys")
                 .env("RUSTFLAGS", &rustflags_env_var),
         )?;
 
@@ -124,7 +123,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     Ok(())
 }
 
-
 fn construct_libsel4_build_command<P>(
     config: &Config,
     locations: &CrossLayerLocations<P>,
@@ -134,39 +132,17 @@ where
 {
     let mut libsel4_build = Command::new("xargo");
 
-    libsel4_build.arg("rustc");
-
-    if config.cli_args.flag_release {
-        libsel4_build.arg("--release");
-    }
-
-    libsel4_build.add_loudness_args(&config.cli_args);
-
-    // There seems to be an issue with `compiler_builtins` imposing
-    // a default compiler used by the `c` feature/dependency; where
-    // it no longer picks up a sane cross-compiler (when host != target triple).
-    // This results in compiler_builtin_shims being compiled with the
-    // host's default compiler (likely x86_64) rather than using
-    // what our target specification (or even Xargo.toml) has prescribed.
-    //
-    // This fix is a band aid, and will be addressed properly at a later point.
-    // However we can still force/control which cross compiler will
-    // get used to build the shims through the use of CC's envirnoment
-    // variables.
-    //
-    // See the following issues:
-    // `xargo/issues/216`
-    // `cargo-fel4/issues/18`
-    if config.target == "arm-sel4-fel4" {
-        libsel4_build.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
-    }
-
     libsel4_build
+        .arg("rustc")
+        .arg_if(|| config.cli_args.flag_release, "--release")
+        .add_loudness_args(&config.cli_args)
+        .handle_arm_edge_case(&config)
         .add_locations_as_env_vars(locations)
         .arg("--target")
         .arg(&config.target)
         .arg("-p")
         .arg("libsel4-sys");
+
     libsel4_build
 }
 
@@ -178,35 +154,20 @@ fn construct_root_task_build_command<P>(
     config: &Config,
     cross_layer_locations: &CrossLayerLocations<P>,
 ) -> Command
-    where
-        P: Borrow<Path>,
+where
+    P: Borrow<Path>,
 {
     let mut root_task_build = Command::new("xargo");
-    root_task_build.arg("rustc").arg("--bin").arg("root-task");
-    if config.cli_args.flag_release {
-        root_task_build.arg("--release");
-    }
-    root_task_build.add_loudness_args(&config.cli_args);
-    // There seems to be an issue with `compiler_builtins` imposing
-    // a default compiler used by the `c` feature/dependency; where
-    // it no longer picks up a sane cross-compiler (when host != target triple).
-    // This results in compiler_builtin_shims being compiled with the
-    // host's default compiler (likely x86_64) rather than using
-    // what our target specification (or even Xargo.toml) has prescribed.
-    //
-    // This fix is a band aid, and will be addressed properly at a later point.
-    // However we can still force/control which cross compiler will
-    // get used to build the shims through the use of CC's envirnoment
-    // variables.
-    //
-    // See the following issues:
-    // `xargo/issues/216`
-    // `cargo-fel4/issues/18`
-    if config.target == "arm-sel4-fel4" {
-        root_task_build.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
-    }
-    root_task_build.arg("--target").arg(&config.target);
-    root_task_build.add_locations_as_env_vars(cross_layer_locations);
+    root_task_build
+        .arg("rustc")
+        .arg("--bin")
+        .arg("root-task")
+        .arg_if(|| config.cli_args.flag_release, "--release")
+        .add_loudness_args(&config.cli_args)
+        .handle_arm_edge_case(config)
+        .arg("--target")
+        .arg(&config.target)
+        .add_locations_as_env_vars(cross_layer_locations);
     root_task_build
 }
 
@@ -219,7 +180,16 @@ pub struct CrossLayerLocations<P: Borrow<Path>> {
     rust_target_path: P,
 }
 
-trait CommandExt {
+/// Extension methods for `Command` instances to supply common parameters or metadata
+trait CommandExt
+where
+    Self: Into<Command>,
+{
+    /// Add an argument if a predicate returns true, largely for easier chaining
+    fn arg_if<'c, P, S: AsRef<OsStr>>(&'c mut self, predicate: P, arg: S) -> &'c mut Self
+    where
+        P: FnOnce() -> bool;
+
     /// Populate the command with the environment variables tracked by CrossLayerLocations
     fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
         &'c mut self,
@@ -232,9 +202,22 @@ trait CommandExt {
 
     /// Configures the presence of `--verbose` and `--quiet` flags
     fn add_loudness_args<'c, 'f>(&'c mut self, args: &'f CliArgs) -> &'c mut Self;
+
+    /// Handle a possible edge case in cross-compiling for arm
+    fn handle_arm_edge_case<'c, 'f>(&'c mut self, config: &'f Config) -> &'c mut Self;
 }
 
 impl CommandExt for Command {
+    fn arg_if<'c, P, S: AsRef<OsStr>>(&'c mut self, predicate: P, arg: S) -> &'c mut Self
+    where
+        P: FnOnce() -> bool,
+    {
+        if predicate() {
+            self.arg(arg);
+        }
+        self
+    }
+
     fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
         &'c mut self,
         locations: &'l CrossLayerLocations<P>,
@@ -267,6 +250,28 @@ impl CommandExt for Command {
         }
         if args.flag_verbose {
             self.arg("--verbose");
+        }
+        self
+    }
+
+    fn handle_arm_edge_case<'c, 'f>(&'c mut self, config: &Config) -> &mut Self {
+        // There seems to be an issue with `compiler_builtins` imposing
+        // a default compiler used by the `c` feature/dependency; where
+        // it no longer picks up a sane cross-compiler (when host != target triple).
+        // This results in compiler_builtin_shims being compiled with the
+        // host's default compiler (likely x86_64) rather than using
+        // what our target specification (or even Xargo.toml) has prescribed.
+        //
+        // This fix is a band aid, and will be addressed properly at a later point.
+        // However we can still force/control which cross compiler will
+        // get used to build the shims through the use of CC's envirnoment
+        // variables.
+        //
+        // See the following issues:
+        // `xargo/issues/216`
+        // `cargo-fel4/issues/18`
+        if config.target == "arm-sel4-fel4" {
+            self.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
         }
         self
     }
