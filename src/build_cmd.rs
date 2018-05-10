@@ -41,6 +41,9 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     run_cmd(&mut libsel4_build)?;
 
     // Extract the resolved CMake config details and filter down to ones that might be useful
+    // TODO - once we can treat the fel4.toml configuration values as canonical,
+    // we can move the flag extraction to before the libsel4_build and apply the feature flags
+    // on the very first build!
     let interesting_flags = cache_to_interesting_flags(
         config
             .root_dir
@@ -49,12 +52,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     )?;
     let truthy_cmake_feature_flags = truthy_boolean_flags_as_rust_identifiers(&interesting_flags)?;
     let rustflags_env_var = merge_feature_flags_with_rustflags_env_var(&truthy_cmake_feature_flags);
-
-    run_cmd(
-        &mut construct_libsel4_build_command(config, &cross_layer_locations)
-            .add_as_rustc_feature_flags(&truthy_cmake_feature_flags)
-            .env("RUSTFLAGS", &rustflags_env_var),
-    )?;
 
     // Generate the source code entry point (root task) for the application
     // that will wrap the end-user's code as executing within a sub-thread
@@ -66,7 +63,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     // Build the generated root task binary
     run_cmd(
         &mut construct_root_task_build_command(&config, &cross_layer_locations)
-            .add_as_rustc_feature_flags(&truthy_cmake_feature_flags)
             .env("RUSTFLAGS", &rustflags_env_var),
     )?;
 
@@ -92,7 +88,6 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
                 )
                 .arg("-p")
                 .arg("libsel4-sys")
-                .add_as_rustc_feature_flags(&truthy_cmake_feature_flags)
                 .env("RUSTFLAGS", &rustflags_env_var),
         )?;
 
@@ -132,11 +127,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
 
 fn construct_libsel4_build_command<P>(
     config: &Config,
-    CrossLayerLocations {
-        fel4_manifest_path,
-        fel4_artifact_path,
-        rust_target_path,
-    }: &CrossLayerLocations<P>,
+    locations: &CrossLayerLocations<P>,
 ) -> Command
 where
     P: Borrow<Path>,
@@ -171,9 +162,7 @@ where
     }
 
     libsel4_build
-        .env("FEL4_MANIFEST_PATH", fel4_manifest_path.borrow())
-        .env("FEL4_ARTIFACT_PATH", fel4_artifact_path.borrow())
-        .env("RUST_TARGET_PATH", rust_target_path.borrow())
+        .add_locations_as_env_vars(locations)
         .arg("--target")
         .arg(&config.target)
         .arg("-p")
@@ -217,7 +206,7 @@ fn construct_root_task_build_command<P>(
         root_task_build.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc");
     }
     root_task_build.arg("--target").arg(&config.target);
-    root_task_build.add_as_env_vars(cross_layer_locations);
+    root_task_build.add_locations_as_env_vars(cross_layer_locations);
     root_task_build
 }
 
@@ -232,7 +221,7 @@ pub struct CrossLayerLocations<P: Borrow<Path>> {
 
 trait CommandExt {
     /// Populate the command with the environment variables tracked by CrossLayerLocations
-    fn add_as_env_vars<'c, 'l, P: Borrow<Path>>(
+    fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
         &'c mut self,
         cross_layer_locations: &'l CrossLayerLocations<P>,
     ) -> &'c mut Self;
@@ -246,7 +235,7 @@ trait CommandExt {
 }
 
 impl CommandExt for Command {
-    fn add_as_env_vars<'c, 'l, P: Borrow<Path>>(
+    fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
         &'c mut self,
         locations: &'l CrossLayerLocations<P>,
     ) -> &'c mut Self {
