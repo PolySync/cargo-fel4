@@ -19,8 +19,6 @@ Usage:
 Options:
     -h, --help                   Print this message
     --release                    Build artifacts in release mode, with optimizations
-    --target TRIPLE              Build for the target triple
-    --platform PLAT              Build for the target platform (used for deployment configuration)
     -v, --verbose                Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
 
@@ -46,8 +44,6 @@ pub struct CliArgs {
     pub flag_verbose: bool,
     pub flag_quiet: bool,
     pub flag_release: bool,
-    pub flag_target: String,
-    pub flag_platform: String,
     pub cmd_build: bool,
     pub cmd_simulate: bool,
     pub cmd_deploy: bool,
@@ -98,8 +94,8 @@ pub struct Fel4Metadata {
     pub artifact_path: PathBuf,
     #[serde(rename = "target-specs-path")]
     pub target_specs_path: PathBuf,
-    #[serde(rename = "default-target")]
-    pub default_target: String,
+    pub target: String,
+    pub platform: String,
 }
 
 #[derive(Debug, Clone)]
@@ -183,11 +179,7 @@ pub fn gather() -> Result<Config, Error> {
         fel4_table.clone().try_into()?
     };
 
-    let target = if cli_args.flag_target.is_empty() {
-        fel4_metadata.default_target.clone()
-    } else {
-        cli_args.flag_target.clone()
-    };
+    let target = fel4_metadata.target.clone();
     let arch = Arch::from_target_str(&target)?;
     let subcommand = SubCommand::from_cli_args(&cli_args)?;
 
