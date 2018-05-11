@@ -5,6 +5,10 @@ use cmake_codegen::flags_to_rust_writer;
 use cmake_config::RawFlag;
 use config::{Arch, Config};
 
+const ARM_ASM: &'static str = include_str!("asm/arm.s");
+const X86_ASM: &'static str = include_str!("asm/x86.s");
+const X86_64_ASM: &'static str = include_str!("asm/x86_64.s");
+
 pub struct Generator<'a, 'b, 'c, W: Write + 'a> {
     writer: &'a mut W,
     config: &'b Config,
@@ -47,8 +51,7 @@ pub mod sel4_config {\n",
             r####"#[cfg(feature = "KERNEL_DEBUG_BUILD")]"####
         )?;
         self.writer.write(
-            b"
-#[inline(always)]
+            b"#[inline(always)]
 pub fn debug_halt() {
     unsafe { sel4_sys::seL4_DebugHalt() };
 }
@@ -81,9 +84,15 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
 // NOTE: Don't edit it here; your changes will be lost at the next build!
 #![no_std]
 #![feature(lang_items, core_intrinsics)]
-
-extern crate sel4_sys;"
+#![feature(global_asm)]\n\n"
         )?;
+        let asm = match self.config.arch {
+            Arch::X86 => X86_ASM,
+            Arch::X86_64 => X86_64_ASM,
+            Arch::Arm => ARM_ASM,
+        };
+        writeln!(self.writer, "\nglobal_asm!(r###\"{}\"###);", asm)?;
+        self.writer.write(b"extern crate sel4_sys;\n")?;
         Ok(())
     }
 
@@ -132,7 +141,7 @@ fn main() {
         )?;
 
         match self.config.arch {
-            Arch::X86 => {
+            Arch::X86 | Arch::X86_64 => {
                 writeln!(
                     self.writer,
                     "    regs.rip = {}::run as seL4_Word;",
@@ -196,6 +205,7 @@ impl Termination for () {
 }
 
 #[lang = "start"]
+#[no_mangle]
 fn lang_start<T: Termination + 'static>(
     main: fn() -> T,
     _argc: isize,
@@ -206,6 +216,7 @@ fn lang_start<T: Termination + 'static>(
 }
 
 #[lang = "panic_fmt"]
+#[no_mangle]
 extern "C" fn panic_fmt(
     fmt: core::fmt::Arguments,
     file: &'static str,
@@ -233,6 +244,7 @@ extern "C" fn panic_fmt(
 }
 
 #[lang = "eh_personality"]
+#[no_mangle]
 fn eh_personality() {
     #[cfg(feature = "KernelPrinting")]
     {
@@ -248,6 +260,7 @@ fn eh_personality() {
 }
 
 #[lang = "oom"]
+#[no_mangle]
 extern "C" fn oom() -> ! {
     #[cfg(feature = "KernelPrinting")]
     {
