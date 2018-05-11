@@ -28,7 +28,7 @@ system images.
 Run `cargo fel4 build` from the top-level system directory.
 
 Resulting in:
-└── images
+└── artifacts
     └── feL4img
     └── kernel
 
@@ -110,19 +110,24 @@ pub struct Config {
     pub fel4_metadata: Fel4Metadata,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
 pub enum Arch {
     X86,
+    X86_64,
     Arm,
 }
 
 impl Arch {
     fn from_target_str(target: &str) -> Result<Self, Error> {
         if target.contains("x86_64") {
-            return Ok(Arch::X86);
+            return Ok(Arch::X86_64);
         }
         if target.contains("arm") {
             return Ok(Arch::Arm);
+        }
+        if target.contains("i686") {
+            return Ok(Arch::X86)
         }
         Err(Error::ConfigError(format!(
             "could not derive architecture from target str: {}",
