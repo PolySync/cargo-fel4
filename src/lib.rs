@@ -19,10 +19,12 @@ mod cmake_codegen;
 mod config;
 mod generator;
 mod simulate_cmd;
+mod new_cmd;
 
 pub use build_cmd::handle_build_cmd;
 pub use config::{gather as gather_config, Config, SubCommand};
 pub use simulate_cmd::handle_simulate_cmd;
+pub use new_cmd::handle_new_cmd;
 
 pub enum Error {
     ConfigError(String),

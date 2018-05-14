@@ -9,9 +9,9 @@ static LOGGER: Logger = Logger;
 fn main() {
     if let Err(e) = log::set_logger(&LOGGER) {
         error!("there was an error initializing the logger:\n{}", e);
-
         return;
     };
+
     let config: Config = match cargo_fel4::gather_config() {
         Ok(c) => c,
         Err(e) => {
@@ -29,6 +29,11 @@ fn main() {
         SubCommand::Simulate => {
             if let Err(e) = cargo_fel4::handle_simulate_cmd(&config) {
                 error!("failed to run the simulation command\n{}", e)
+            }
+        }
+        SubCommand::New => {
+            if let Err(e) = cargo_fel4::handle_new_cmd(&config) {
+                error!("failed to run the new command\n{}", e)
             }
         }
         _ => error!("not implemented!"),
