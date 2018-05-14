@@ -100,6 +100,7 @@ pub struct Config {
     pub root_dir: PathBuf,
     /// The end user application's package name
     pub pkg_name: String,
+    pub pkg_module_name: String,
     pub target: String,
     pub arch: Arch,
     pub fel4_metadata: Fel4Metadata,
@@ -145,7 +146,7 @@ pub fn gather() -> Result<Config, Error> {
     let subcommand = SubCommand::from_cli_args(&cli_args)?;
 
     if !cli_args.cmd_new {
-        let (pkg_name, root_dir) = {
+        let (pkg_name, pkg_module_name, root_dir) = {
             let metadata = cargo_metadata::metadata(None)?;
             if metadata.packages.len() != 1 {
                 return Err(Error::ConfigError(String::from(
@@ -162,7 +163,7 @@ pub fn gather() -> Result<Config, Error> {
                     )))
                 }
             };
-            (pkg.name.clone(), mani_path)
+            (pkg.name.clone(), pkg.name.replace("-", "_"), mani_path)
         };
 
         let fel4_metadata: Fel4Metadata = {
@@ -190,17 +191,18 @@ pub fn gather() -> Result<Config, Error> {
             subcommand,
             root_dir,
             pkg_name,
+            pkg_module_name,
             arch,
             target,
             fel4_metadata,
         })
     } else {
-        // NOTE: update this once we have contextual options
         Ok(Config {
             cli_args,
             subcommand,
             root_dir: PathBuf::new(),
             pkg_name: String::new(),
+            pkg_module_name: String::new(),
             arch: Arch::X86_64,
             target: String::new(),
             fel4_metadata: Fel4Metadata {
