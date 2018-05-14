@@ -120,7 +120,7 @@ impl Arch {
             return Ok(Arch::Arm);
         }
         if target.contains("i686") {
-            return Ok(Arch::X86)
+            return Ok(Arch::X86);
         }
         Err(Error::ConfigError(format!(
             "could not derive architecture from target str: {}",
@@ -192,8 +192,7 @@ pub fn gather() -> Result<Config, Error> {
             target,
             fel4_metadata,
         })
-    }
-    else {
+    } else {
         // NOTE: update this once we have contextual options
         Ok(Config {
             cli_args,
@@ -207,7 +206,7 @@ pub fn gather() -> Result<Config, Error> {
                 target_specs_path: PathBuf::new(),
                 target: String::new(),
                 platform: String::new(),
-            }
+            },
         })
     }
 }

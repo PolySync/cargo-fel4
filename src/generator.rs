@@ -34,8 +34,10 @@ impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
         self.writer.write(
             b"
 use core::mem;
-use sel4_sys::*;\n")?;
-        self.writer.write(b"
+use sel4_sys::*;\n",
+        )?;
+        self.writer.write(
+            b"
 // include the seL4 kernel configurations
 #[allow(dead_code)]
 #[allow(non_upper_case_globals)]
@@ -178,7 +180,7 @@ fn main() {
     }
 }
 
-const BOOT_INFO_AND_LANG_ITEM_CODE : &'static str = r##"
+const BOOT_INFO_AND_LANG_ITEM_CODE: &'static str = r##"
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
 static mut RUN_ONCE: bool = false;
 
