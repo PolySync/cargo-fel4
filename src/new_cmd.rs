@@ -66,12 +66,22 @@ pub fn run() {
     let mut fel4_toml_file = File::create(Path::new(package_name).join("fel4.toml"))?;
     fel4_toml_file.write_all(FEL4_TOML_TEXT.as_bytes())?;
 
+    // create Xargo.toml with our target features
+    let mut xargo_toml_file = File::create(Path::new(package_name).join("Xargo.toml"))?;
+    xargo_toml_file.write_all(
+        b"[target.x86_64-sel4-fel4.dependencies]
+alloc = {}
+[target.arm-sel4-fel4.dependencies]
+alloc = {}
+",
+    )?;
+
     Ok(())
 }
 
 const FEL4_TOML_TEXT: &'static str = r##"[fel4]
 artifact-path = "artifacts"
-target-specs-path = "targets"
+target-specs-path = "target_specs"
 target = "x86_64-sel4-fel4"
 platform = "pc99"
 
