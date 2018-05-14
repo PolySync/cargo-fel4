@@ -29,7 +29,11 @@ impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
 
     pub fn generate(&mut self) -> Result<(), Error> {
         self.generate_features_and_crates()?;
-        writeln!(self.writer, "extern crate {};", self.config.pkg_name)?;
+        writeln!(
+            self.writer,
+            "extern crate {};",
+            self.config.pkg_name.replace("-", "_")
+        )?;
 
         self.writer.write(
             b"
@@ -147,7 +151,7 @@ fn main() {
                 writeln!(
                     self.writer,
                     "    regs.rip = {}::run as seL4_Word;",
-                    self.config.pkg_name
+                    self.config.pkg_name.replace("-", "_")
                 )?;
                 writeln!(self.writer, "    regs.rsp = stack_top as seL4_Word;")?;
             }
@@ -155,7 +159,7 @@ fn main() {
                 writeln!(
                     self.writer,
                     "    regs.pc = {}::run as seL4_Word;",
-                    self.config.pkg_name
+                    self.config.pkg_name.replace("-", "_")
                 )?;
                 writeln!(self.writer, "    regs.sp = stack_top as seL4_Word;")?;
             }
