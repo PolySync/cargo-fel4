@@ -34,7 +34,7 @@ Resulting in:
 
 Run `cargo fel4 simulate` to simulate a system image with QEMU.
 
-Run `cargo fel4 new` to create a new feL4 package.
+Run `cargo fel4 new` to create a new feL4 project.
 ";
 
 #[derive(Debug, Clone, Deserialize)]
