@@ -33,6 +33,8 @@ Resulting in:
     └── kernel
 
 Run `cargo fel4 simulate` to simulate a system image with QEMU.
+
+Run `cargo fel4 new` to create a new feL4 package.
 ";
 
 #[derive(Debug, Clone, Deserialize)]
