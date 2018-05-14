@@ -11,10 +11,10 @@ use toml::Value;
 use super::Error;
 
 const USAGE: &str = "
-Build, manage and simulate Helios feL4 system images
+Build, manage and simulate feL4 system images
 
 Usage:
-    cargo fel4 [options] [build | simulate | deploy | info]
+    cargo fel4 [options] [build | simulate]
 
 Options:
     -h, --help                   Print this message
@@ -22,21 +22,17 @@ Options:
     -v, --verbose                Use verbose output (-vv very verbose/build.rs output)
     -q, --quiet                  No output printed to stdout
 
-This cargo subcommand handles the process of building and managing Helios
+This cargo subcommand handles the process of building and managing feL4
 system images.
 
 Run `cargo fel4 build` from the top-level system directory.
 
 Resulting in:
 └── artifacts
-    └── feL4img
+    ├── feL4img
     └── kernel
 
 Run `cargo fel4 simulate` to simulate a system image with QEMU.
-
-Run `cargo fel4 info` to produce a human readable description of the system.
-
-Run `cargo fel4 deploy` to deploy the system image to a given platform.
 ";
 
 #[derive(Debug, Clone, Deserialize)]
@@ -46,8 +42,6 @@ pub struct CliArgs {
     pub flag_release: bool,
     pub cmd_build: bool,
     pub cmd_simulate: bool,
-    pub cmd_deploy: bool,
-    pub cmd_info: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -55,8 +49,6 @@ pub enum SubCommand {
     Missing,
     Build,
     Simulate,
-    Deploy,
-    Info,
 }
 
 impl SubCommand {
@@ -68,8 +60,6 @@ impl SubCommand {
         let out = vec![
             (SubCommand::Build, args.cmd_build),
             (SubCommand::Simulate, args.cmd_simulate),
-            (SubCommand::Deploy, args.cmd_deploy),
-            (SubCommand::Info, args.cmd_info),
         ].iter()
             .fold((SubCommand::Missing, 0), |state, cmd| {
                 if cmd.1 {
