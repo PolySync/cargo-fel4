@@ -1,6 +1,8 @@
 extern crate cargo_metadata;
 extern crate toml;
 
+use log;
+use log::LevelFilter;
 use std::borrow::Borrow;
 use std::env;
 use std::ffi::OsStr;
@@ -8,14 +10,22 @@ use std::fs::{self, File};
 use std::path::Path;
 use std::process::Command;
 
-use super::{run_cmd, Error};
+use super::{gather_config, run_cmd, Error};
 use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
-use config::{CliArgs, Config};
+use config::{BuildCmd, Config};
 use generator::Generator;
 use heck::ShoutySnakeCase;
 
-pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
-    let build_type = if config.cli_args.flag_release {
+pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
+    if subcmd.verbose {
+        log::set_max_level(LevelFilter::Info);
+    } else {
+        log::set_max_level(LevelFilter::Error);
+    }
+
+    let config: Config = gather_config()?;
+
+    let build_type = if subcmd.release {
         String::from("release")
     } else {
         String::from("debug")
@@ -38,7 +48,8 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     };
 
     // Initial build of libsel4-sys to construct kernel, bindings and resolve CMake config
-    let mut libsel4_build = construct_libsel4_build_command(config, &cross_layer_locations);
+    let mut libsel4_build =
+        construct_libsel4_build_command(subcmd, &config, &cross_layer_locations);
     run_cmd(&mut libsel4_build)?;
 
     // Extract the resolved CMake config details and filter down to ones that might be useful
@@ -59,11 +70,11 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     let root_task_path = config.root_dir.join("src").join("bin");
     fs::create_dir_all(&root_task_path)?;
     let mut root_file = File::create(root_task_path.join("root-task.rs").as_path())?;
-    Generator::new(&mut root_file, config, &interesting_flags).generate()?;
+    Generator::new(&mut root_file, &config, &interesting_flags).generate()?;
 
     // Build the generated root task binary
     run_cmd(
-        &mut construct_root_task_build_command(&config, &cross_layer_locations)
+        &mut construct_root_task_build_command(subcmd, &config, &cross_layer_locations)
             .env("RUSTFLAGS", &rustflags_env_var),
     )?;
 
@@ -82,7 +93,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
     // elfloader-tool a path to the root-task binary
     if config.target == "arm-sel4-fel4" {
         run_cmd(
-            construct_libsel4_build_command(&config, &cross_layer_locations)
+            construct_libsel4_build_command(subcmd, &config, &cross_layer_locations)
                 .env(
                     "FEL4_ROOT_TASK_IMAGE_PATH",
                     target_build_cache_path.join("root-task"),
@@ -124,6 +135,7 @@ pub fn handle_build_cmd(config: &Config) -> Result<(), Error> {
 }
 
 fn construct_libsel4_build_command<P>(
+    subcmd: &BuildCmd,
     config: &Config,
     locations: &CrossLayerLocations<P>,
 ) -> Command
@@ -134,8 +146,8 @@ where
 
     libsel4_build
         .arg("rustc")
-        .arg_if(|| config.cli_args.flag_release, "--release")
-        .add_loudness_args(&config.cli_args)
+        .arg_if(|| subcmd.release, "--release")
+        .add_loudness_args(&subcmd)
         .handle_arm_edge_case(&config)
         .add_locations_as_env_vars(locations)
         .arg("--target")
@@ -151,6 +163,7 @@ where
 ///
 /// Note: Does NOT include application of Rust/Cargo feature flags
 fn construct_root_task_build_command<P>(
+    subcmd: &BuildCmd,
     config: &Config,
     cross_layer_locations: &CrossLayerLocations<P>,
 ) -> Command
@@ -162,8 +175,8 @@ where
         .arg("rustc")
         .arg("--bin")
         .arg("root-task")
-        .arg_if(|| config.cli_args.flag_release, "--release")
-        .add_loudness_args(&config.cli_args)
+        .arg_if(|| subcmd.release, "--release")
+        .add_loudness_args(&subcmd)
         .handle_arm_edge_case(config)
         .arg("--target")
         .arg(&config.target)
@@ -201,7 +214,7 @@ where
     fn add_as_rustc_feature_flags<'c, 'f>(&'c mut self, flags: &'f [String]) -> &'c mut Self;
 
     /// Configures the presence of `--verbose` and `--quiet` flags
-    fn add_loudness_args<'c, 'f>(&'c mut self, args: &'f CliArgs) -> &'c mut Self;
+    fn add_loudness_args<'c, 'f>(&'c mut self, args: &'f BuildCmd) -> &'c mut Self;
 
     /// Handle a possible edge case in cross-compiling for arm
     fn handle_arm_edge_case<'c, 'f>(&'c mut self, config: &'f Config) -> &'c mut Self;
@@ -244,11 +257,11 @@ impl CommandExt for Command {
         self
     }
 
-    fn add_loudness_args<'c, 'f>(&'c mut self, args: &CliArgs) -> &mut Self {
-        if args.flag_quiet {
+    fn add_loudness_args<'c, 'f>(&'c mut self, args: &BuildCmd) -> &mut Self {
+        if args.quiet {
             self.arg("--quiet");
         }
-        if args.flag_verbose {
+        if args.verbose {
             self.arg("--verbose");
         }
         self

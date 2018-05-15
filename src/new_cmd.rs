@@ -5,87 +5,75 @@ use std::path::Path;
 use std::process::Command;
 
 use super::{run_cmd, Error};
-use config::Config;
+use config::NewCmd;
+use log;
+use log::LevelFilter;
 
 /// Create a new feL4 project.
 ///
 /// Generates all of the scaffolding files for a new
 /// feL4 project.
-pub fn handle_new_cmd(config: &Config) -> Result<(), Error> {
-    // Default project name is hard coded until we replace
-    // our option handling mechanism
-    // TODO - use config/cli options
-    let package_name = "fel4-project";
+pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
+    if subcmd.verbose {
+        log::set_max_level(LevelFilter::Info);
+    } else {
+        log::set_max_level(LevelFilter::Error);
+    }
 
-    generate_baseline_cargo_package(config)?;
+    generate_baseline_cargo_package(subcmd)?;
 
-    generate_fel4_project_files(config)?;
+    generate_fel4_project_files(subcmd)?;
 
-    generate_target_specs(config)?;
+    generate_target_specs(subcmd)?;
 
     Ok(())
 }
 
-fn generate_baseline_cargo_package(config: &Config) -> Result<(), Error> {
-    // Default project name is hard coded until we replace
-    // our option handling mechanism
-    // TODO - use config/cli options
-    let package_name = "fel4-project";
-
+fn generate_baseline_cargo_package(subcmd: &NewCmd) -> Result<(), Error> {
     let mut cmd = Command::new("cargo");
     cmd.arg("new");
 
     // We passthrough these to cargo
-    if config.cli_args.flag_verbose {
+    if subcmd.verbose {
         cmd.arg("--verbose");
-    } else if config.cli_args.flag_quiet {
+    } else if subcmd.quiet {
         cmd.arg("--quiet");
     }
 
     // The project name and directory are the same
-    cmd.arg("--name").arg(&package_name);
+    cmd.arg("--name").arg(&subcmd.name);
 
-    run_cmd(cmd.arg("--lib").arg(&package_name))?;
+    run_cmd(cmd.arg("--lib").arg(&subcmd.name))?;
 
     Ok(())
 }
 
-fn generate_fel4_project_files(config: &Config) -> Result<(), Error> {
-    // Default project name is hard coded until we replace
-    // our option handling mechanism
-    // TODO - use config/cli options
-    let package_name = "fel4-project";
-
+fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
     // Create example feL4 application thread run function
-    let mut lib_src_file = File::create(Path::new(package_name).join("src").join("lib.rs"))?;
+    let mut lib_src_file = File::create(Path::new(&subcmd.name).join("src").join("lib.rs"))?;
     lib_src_file.write_all(APP_LIB_CODE.as_bytes())?;
 
     // Add feL4 dependencies to Cargo.toml
     let mut cargo_toml_file = OpenOptions::new()
         .append(true)
-        .open(Path::new(package_name).join("Cargo.toml"))?;
+        .open(Path::new(&subcmd.name).join("Cargo.toml"))?;
     cargo_toml_file.write_all(
         b"libsel4-sys = {git = \"ssh://github.com/PolySync/fel4-dependencies.git\", branch =           \"devel\"}",
     )?;
 
-    let mut fel4_toml_file = File::create(Path::new(package_name).join("fel4.toml"))?;
+    let mut fel4_toml_file = File::create(Path::new(&subcmd.name).join("fel4.toml"))?;
     fel4_toml_file.write_all(FEL4_TOML_TEXT.as_bytes())?;
 
     // Create Xargo.toml with our target features
-    let mut xargo_toml_file = File::create(Path::new(package_name).join("Xargo.toml"))?;
+    let mut xargo_toml_file = File::create(Path::new(&subcmd.name).join("Xargo.toml"))?;
     xargo_toml_file.write_all(XARGO_TOML_TEXT.as_bytes())?;
 
     Ok(())
 }
 
-fn generate_target_specs(config: &Config) -> Result<(), Error> {
-    // Default project name is hard coded until we replace
-    // our option handling mechanism
-    // TODO - use config/cli options
-    let package_name = "fel4-project";
-
+fn generate_target_specs(subcmd: &NewCmd) -> Result<(), Error> {
     // Create target specifications directory and specification files
-    let target_specs_path = Path::new(package_name).join("target_specs");
+    let target_specs_path = Path::new(&subcmd.name).join("target_specs");
     fs::create_dir(Path::new(&target_specs_path))?;
 
     let mut target_spec_readme_file = File::create(&target_specs_path.join("README.md"))?;

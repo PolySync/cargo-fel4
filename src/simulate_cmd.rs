@@ -1,9 +1,19 @@
+use log;
+use log::LevelFilter;
 use std::process::Command;
 
-use super::{run_cmd, Error};
-use config::Config;
+use super::{gather_config, run_cmd, Error};
+use config::{Config, SimulateCmd};
 
-pub fn handle_simulate_cmd(config: &Config) -> Result<(), Error> {
+pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
+    if subcmd.verbose {
+        log::set_max_level(LevelFilter::Info);
+    } else {
+        log::set_max_level(LevelFilter::Error);
+    }
+
+    let config: Config = gather_config()?;
+
     let sim_script_path = config
         .root_dir
         .join(&config.fel4_metadata.artifact_path)

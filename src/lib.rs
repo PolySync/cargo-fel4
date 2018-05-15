@@ -5,7 +5,8 @@ extern crate colored;
 #[macro_use]
 extern crate log;
 extern crate cmake_config;
-extern crate docopt;
+#[macro_use]
+extern crate structopt;
 extern crate heck;
 extern crate toml;
 
@@ -22,7 +23,7 @@ mod new_cmd;
 mod simulate_cmd;
 
 pub use build_cmd::handle_build_cmd;
-pub use config::{gather as gather_config, Config, SubCommand};
+pub use config::{gather as gather_config, Config, Fel4SubCmd};
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;
 

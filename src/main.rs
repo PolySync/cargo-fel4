@@ -1,8 +1,11 @@
+extern crate structopt;
 #[macro_use]
 extern crate log;
 extern crate cargo_fel4;
 
-use cargo_fel4::{Config, Logger, SubCommand};
+use cargo_fel4::{Fel4SubCmd, Logger};
+use log::LevelFilter;
+use structopt::StructOpt;
 
 static LOGGER: Logger = Logger;
 
@@ -12,30 +15,24 @@ fn main() {
         return;
     };
 
-    let config: Config = match cargo_fel4::gather_config() {
-        Ok(c) => c,
-        Err(e) => {
-            error!("failed to parse configuration\n{}", e);
-            return;
-        }
-    };
+    // subcommands can adjust as needed
+    log::set_max_level(LevelFilter::Error);
 
-    match config.subcommand {
-        SubCommand::Build => {
-            if let Err(e) = cargo_fel4::handle_build_cmd(&config) {
+    match Fel4SubCmd::from_args() {
+        Fel4SubCmd::BuildCmd(c) => {
+            if let Err(e) = cargo_fel4::handle_build_cmd(&c) {
                 error!("failed to run the build command\n{}", e)
             }
         }
-        SubCommand::Simulate => {
-            if let Err(e) = cargo_fel4::handle_simulate_cmd(&config) {
+        Fel4SubCmd::SimulateCmd(c) => {
+            if let Err(e) = cargo_fel4::handle_simulate_cmd(&c) {
                 error!("failed to run the simulation command\n{}", e)
             }
         }
-        SubCommand::New => {
-            if let Err(e) = cargo_fel4::handle_new_cmd(&config) {
+        Fel4SubCmd::NewCmd(c) => {
+            if let Err(e) = cargo_fel4::handle_new_cmd(&c) {
                 error!("failed to run the new command\n{}", e)
             }
         }
-        _ => error!("not implemented!"),
     }
 }
