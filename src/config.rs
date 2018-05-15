@@ -8,7 +8,13 @@ use toml::Value;
 use super::Error;
 
 #[derive(Debug, Clone, StructOpt)]
-#[structopt(name = "cargo-fel4", about = "Build, manage and simulate feL4 system images")]
+#[structopt(bin_name = "cargo")]
+pub enum CargoFel4Cli {
+    #[structopt(name = "fel4", about = "Build, manage and simulate feL4 system images")]
+    Fel4SubCmd(Fel4SubCmd),
+}
+
+#[derive(Debug, Clone, StructOpt)]
 pub enum Fel4SubCmd {
     #[structopt(name = "build", about = "Build a feL4 project")]
     BuildCmd(BuildCmd),

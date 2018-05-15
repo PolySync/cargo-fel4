@@ -3,7 +3,7 @@ extern crate structopt;
 extern crate log;
 extern crate cargo_fel4;
 
-use cargo_fel4::{Fel4SubCmd, Logger};
+use cargo_fel4::{CargoFel4Cli, Fel4SubCmd, Logger};
 use log::LevelFilter;
 use structopt::StructOpt;
 
@@ -18,7 +18,11 @@ fn main() {
     // subcommands can adjust as needed
     log::set_max_level(LevelFilter::Error);
 
-    match Fel4SubCmd::from_args() {
+    let subcmd = match CargoFel4Cli::from_args() {
+        CargoFel4Cli::Fel4SubCmd(c) => c,
+    };
+
+    match subcmd {
         Fel4SubCmd::BuildCmd(c) => {
             if let Err(e) = cargo_fel4::handle_build_cmd(&c) {
                 error!("failed to run the build command\n{}", e)
