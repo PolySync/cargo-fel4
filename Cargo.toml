@@ -2,7 +2,6 @@
 name = "cargo-fel4"
 version = "0.0.1"
 publish = false
-build = "build.rs"
 
 [dependencies]
 cmake_config = { version = "*", path = "cmake_config" }

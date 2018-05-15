@@ -1,0 +1,24 @@
+{
+    "data-layout": "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64",
+    "llvm-target": "arm-linux-gnueabihf",
+    "target-endian": "little",
+    "target-pointer-width": "32",
+    "target-c-int-width": "32",
+    "os": "sel4",
+    "env": "fel4",
+    "arch": "arm",
+    "linker-is-gnu": true,
+    "executables": true,
+    "linker": "arm-linux-gnueabihf-gcc",
+    "ar": "arm-linux-gnueabihf-ar",
+    "relocation-model": "static",
+    "position-independent-executables": true,
+    "has-elf-tls": true,
+    "panic-strategy": "abort",
+    "no-default-libraries": true,
+    "linker-flavor": "gcc",
+    "pre-link-args": {
+        "gcc": ["-ffreestanding", "-nodefaultlibs", "-nostdlib"]
+    },
+    "default-codegen-units": 1
+}

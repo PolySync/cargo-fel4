@@ -14,6 +14,7 @@ use config::Config;
 pub fn handle_new_cmd(config: &Config) -> Result<(), Error> {
     // Default project name is hard coded until we replace
     // our option handling mechanism
+    // TODO - use config/cli options
     let package_name = "fel4-project";
 
     let mut cmd = Command::new("cargo");
@@ -77,9 +78,23 @@ alloc = {}
 ",
     )?;
 
+    generate_target_specs(config)?;
+
+    Ok(())
+}
+
+fn generate_target_specs(config: &Config) -> Result<(), Error> {
+    // Default project name is hard coded until we replace
+    // our option handling mechanism
+    // TODO - use config/cli options
+    let package_name = "fel4-project";
+
     // Create target specifications directory and specification files
     let target_specs_path = Path::new(package_name).join("target_specs");
     fs::create_dir(Path::new(&target_specs_path))?;
+
+    let mut target_spec_readme_file = File::create(&target_specs_path.join("README.md"))?;
+    target_spec_readme_file.write_all(FEL4_TARGET_SPEC_README.as_bytes())?;
 
     let mut target_spec_x86_64_file =
         File::create(&target_specs_path.join("x86_64-sel4-fel4.json"))?;
@@ -91,11 +106,12 @@ alloc = {}
     Ok(())
 }
 
+const FEL4_TARGET_SPEC_README: &'static str = include_str!("../target_specs/README.md");
+
 const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
-    include_str!(env!("TARGET_SPEC_PATH_X86_64_SEL4_FEL4"));
+    include_str!("../target_specs/x86_64-sel4-fel4.json");
 
 const FEL4_TARGET_SPEC_ARM_SEL4_FEL4: &'static str =
-    include_str!(env!("TARGET_SPEC_PATH_ARM_SEL4_FEL4"));
+    include_str!("../target_specs/arm-sel4-fel4.json");
 
-const FEL4_TOML_TEXT: &'static str =
-    include_str!("../configs/fel4.toml");
+const FEL4_TOML_TEXT: &'static str = include_str!("../configs/fel4.toml");
