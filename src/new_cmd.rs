@@ -40,32 +40,33 @@ fn generate_baseline_cargo_package(subcmd: &NewCmd) -> Result<(), Error> {
         cmd.arg("--quiet");
     }
 
-    // The project name and directory are the same
-    cmd.arg("--name").arg(&subcmd.name);
+    if let Some(ref n) = subcmd.name {
+        cmd.arg("--name").arg(&n);
+    }
 
-    run_cmd(cmd.arg("--lib").arg(&subcmd.name))?;
+    run_cmd(cmd.arg("--lib").arg(&subcmd.path))?;
 
     Ok(())
 }
 
 fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
     // Create example feL4 application thread run function
-    let mut lib_src_file = File::create(Path::new(&subcmd.name).join("src").join("lib.rs"))?;
+    let mut lib_src_file = File::create(Path::new(&subcmd.path).join("src").join("lib.rs"))?;
     lib_src_file.write_all(APP_LIB_CODE.as_bytes())?;
 
     // Add feL4 dependencies to Cargo.toml
     let mut cargo_toml_file = OpenOptions::new()
         .append(true)
-        .open(Path::new(&subcmd.name).join("Cargo.toml"))?;
+        .open(Path::new(&subcmd.path).join("Cargo.toml"))?;
     cargo_toml_file.write_all(
         b"libsel4-sys = {git = \"ssh://github.com/PolySync/fel4-dependencies.git\", branch =           \"devel\"}",
     )?;
 
-    let mut fel4_toml_file = File::create(Path::new(&subcmd.name).join("fel4.toml"))?;
+    let mut fel4_toml_file = File::create(Path::new(&subcmd.path).join("fel4.toml"))?;
     fel4_toml_file.write_all(FEL4_TOML_TEXT.as_bytes())?;
 
     // Create Xargo.toml with our target features
-    let mut xargo_toml_file = File::create(Path::new(&subcmd.name).join("Xargo.toml"))?;
+    let mut xargo_toml_file = File::create(Path::new(&subcmd.path).join("Xargo.toml"))?;
     xargo_toml_file.write_all(XARGO_TOML_TEXT.as_bytes())?;
 
     Ok(())
@@ -73,7 +74,7 @@ fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
 
 fn generate_target_specs(subcmd: &NewCmd) -> Result<(), Error> {
     // Create target specifications directory and specification files
-    let target_specs_path = Path::new(&subcmd.name).join("target_specs");
+    let target_specs_path = Path::new(&subcmd.path).join("target_specs");
     fs::create_dir(Path::new(&target_specs_path))?;
 
     let mut target_spec_readme_file = File::create(&target_specs_path.join("README.md"))?;

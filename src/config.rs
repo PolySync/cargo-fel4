@@ -51,10 +51,10 @@ pub struct NewCmd {
     #[structopt(
         name = "name",
         long = "name",
-        help = "Set the resulting package name",
-        default_value = "fel4-project"
+        help = "Set the resulting package name, defaults to the directory name"
     )]
-    pub name: String,
+    pub name: Option<String>,
+    pub path: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
