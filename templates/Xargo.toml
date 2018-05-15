@@ -1,0 +1,4 @@
+[target.x86_64-sel4-fel4.dependencies]
+alloc = {}
+[target.arm-sel4-fel4.dependencies]
+alloc = {}
