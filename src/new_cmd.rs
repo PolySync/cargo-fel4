@@ -59,7 +59,7 @@ fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
         .append(true)
         .open(Path::new(&subcmd.path).join("Cargo.toml"))?;
     cargo_toml_file.write_all(
-        b"libsel4-sys = {git = \"ssh://github.com/PolySync/libsel4-sys.git\", branch =           \"devel\"}",
+        b"libsel4-sys = {git = \"ssh://github.com/PolySync/libsel4-sys.git\", branch = \"devel\"}",
     )?;
 
     let mut fel4_toml_file = File::create(Path::new(&subcmd.path).join("fel4.toml"))?;
