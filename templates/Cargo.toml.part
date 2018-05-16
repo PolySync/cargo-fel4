@@ -3,12 +3,15 @@ libsel4-sys = {git = "ssh://github.com/PolySync/libsel4-sys.git", branch = "deve
 [dependencies.wee_alloc]
 version = "0.4"
 features = ["static_array_backend"]
+optional = true
 
 [dependencies.proptest]
 version = "0.7"
 default-features = false
 features = ["alloc", "nightly"]
+optional = true
 
 [features]
 default = []
-alloc = []
+alloc = ["wee_alloc"]
+test = ["alloc", "proptest"]

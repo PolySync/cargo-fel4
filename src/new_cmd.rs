@@ -104,4 +104,4 @@ const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
 
 const XARGO_TOML_TEXT: &'static str = include_str!("../templates/Xargo.toml");
 
-const CARGO_TOML_TEXT: &'static str = include_str!("../templates/Cargo.toml");
+const CARGO_TOML_TEXT: &'static str = include_str!("../templates/Cargo.toml.part");

@@ -183,13 +183,9 @@ where
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(config)
         .arg("--features")
-        .arg("alloc")
+        .arg("test")
         .arg("--target")
         .arg(&config.target)
-        //.arg("--tests")
-        .arg("--")
-        .arg("--cfg")
-        .arg("test")
         .add_locations_as_env_vars(cross_layer_locations);
     root_task_build
 }

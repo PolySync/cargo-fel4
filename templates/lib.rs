@@ -1,8 +1,8 @@
 #![no_std]
 extern crate sel4_sys;
 
-#[cfg(test)]
-mod fel4_test;
+#[cfg(feature = "test")]
+pub mod fel4_test;
 
 // TODO - feature-flag the debugging resources
 use sel4_sys::DebugOutHandle;

@@ -109,7 +109,7 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
         self.writer.write(b"#[cfg(feature = \"alloc\")]\n")?;
         self.writer.write(b"extern crate alloc;\n")?;
         self.writer
-            .write(b"#[cfg(all(test, feature = \"alloc\"))]\n")?;
+            .write(b"#[cfg(all(feature = \"test\", feature = \"alloc\"))]\n")?;
         self.writer.write(b"extern crate proptest;\n")?;
         Ok(())
     }
@@ -162,9 +162,9 @@ fn main() {
             Arch::X86 | Arch::X86_64 => {
                 writeln!(
                     self.writer,
-                    "    #[cfg(test)]
+                    "    #[cfg(feature = \"test\")]
     {{ regs.rip = {}::fel4_test::run as seL4_Word; }}
-    #[cfg(not(test))]
+    #[cfg(not(feature = \"test\"))]
     {{ regs.rip = {}::run as seL4_Word; }}",
                     self.config.pkg_module_name,
                     self.config.pkg_module_name,
