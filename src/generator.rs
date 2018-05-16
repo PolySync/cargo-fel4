@@ -163,10 +163,11 @@ fn main() {
                 writeln!(
                     self.writer,
                     "    #[cfg(test)]
-    {{ regs.rip = fel4_test::run as seL4_Word; }}
+    {{ regs.rip = {}::fel4_test::run as seL4_Word; }}
     #[cfg(not(test))]
     {{ regs.rip = {}::run as seL4_Word; }}",
-                    self.config.pkg_module_name
+                    self.config.pkg_module_name,
+                    self.config.pkg_module_name,
                 )?;
                 writeln!(self.writer, "    regs.rsp = stack_top as seL4_Word;")?;
             }

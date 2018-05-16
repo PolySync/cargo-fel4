@@ -151,6 +151,9 @@ where
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(&config)
         .add_locations_as_env_vars(locations)
+        //.arg("--tests")
+        //.arg("--features")
+        //.arg("\"alloc\"")
         .arg("--target")
         .arg(&config.target)
         .arg("-p")
@@ -179,8 +182,14 @@ where
         .arg_if(|| subcmd.release, "--release")
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(config)
+        //.arg("--tests")
+        .arg("--features")
+        .arg("alloc")
         .arg("--target")
         .arg(&config.target)
+        //.arg("--")
+        //.arg("--cfg")
+        //.arg("test")
         .add_locations_as_env_vars(cross_layer_locations);
     root_task_build
 }
