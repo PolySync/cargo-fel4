@@ -34,6 +34,8 @@ pub struct BuildCmd {
     pub quiet: bool,
     #[structopt(name = "release", long = "release", help = "Build artifacts in release mode")]
     pub release: bool,
+    #[structopt(name = "tests", long = "tests", help = "Build with feL4 test features enabled")]
+    pub tests: bool,
 }
 
 #[derive(Debug, Clone, StructOpt)]

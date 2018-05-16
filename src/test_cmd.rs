@@ -1,17 +1,12 @@
-use std::fs;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-use std::process::Command;
 
-use super::{run_cmd, Error};
-use config::{TestCmd, TestSubCmd};
+use super::{handle_build_cmd, Error};
+use config::{BuildCmd, TestCmd, TestSubCmd};
 use log;
 use log::LevelFilter;
 
-/// TODO
-/// probably should renanme other top-level parameter to something
-/// more consistent (<...>_cmd ?)
 pub fn handle_test_cmd(test_cmd: &TestCmd) -> Result<(), Error> {
     if test_cmd.verbose {
         log::set_max_level(LevelFilter::Info);
@@ -21,14 +16,30 @@ pub fn handle_test_cmd(test_cmd: &TestCmd) -> Result<(), Error> {
 
     if let Some(ref subcmd) = test_cmd.subcmd {
         match subcmd {
-            TestSubCmd::Build => generate_source_files(test_cmd)?,
+            TestSubCmd::Build => {
+                generate_source_files()?;
+                run_test_build(test_cmd)?;
+            }
         }
     }
 
     Ok(())
 }
 
-fn generate_source_files(test_cmd: &TestCmd) -> Result<(), Error> {
+fn run_test_build(test_cmd: &TestCmd) -> Result<(), Error> {
+    let build_cmd = BuildCmd {
+        verbose: test_cmd.verbose,
+        quiet: test_cmd.quiet,
+        release: false,
+        tests: true,
+    };
+
+    handle_build_cmd(&build_cmd)?;
+
+    Ok(())
+}
+
+fn generate_source_files() -> Result<(), Error> {
     let src_path = Path::new("src").join("fel4_test.rs");
 
     if !src_path.exists() {

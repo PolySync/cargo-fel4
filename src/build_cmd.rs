@@ -151,9 +151,6 @@ where
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(&config)
         .add_locations_as_env_vars(locations)
-        //.arg("--tests")
-        //.arg("--features")
-        //.arg("\"alloc\"")
         .arg("--target")
         .arg(&config.target)
         .arg("-p")
@@ -166,6 +163,10 @@ where
 /// will build the root task binary
 ///
 /// Note: Does NOT include application of Rust/Cargo feature flags
+///
+/// TODO: Replace our optional dependency usage with proper
+/// test feature flagging when custom test frameworks are
+/// more feasible in our environment
 fn construct_root_task_build_command<P>(
     subcmd: &BuildCmd,
     config: &Config,
@@ -182,8 +183,8 @@ where
         .arg_if(|| subcmd.release, "--release")
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(config)
-        .arg("--features")
-        .arg("test")
+        .arg_if(|| subcmd.tests, "--features")
+        .arg_if(|| subcmd.tests, "test")
         .arg("--target")
         .arg(&config.target)
         .add_locations_as_env_vars(cross_layer_locations);

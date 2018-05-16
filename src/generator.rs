@@ -94,7 +94,7 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
 #![cfg_attr(feature = \"alloc\", feature(alloc))]
 #![feature(lang_items, core_intrinsics)]
 #![feature(global_asm)]
-#![feature(global_allocator)]\n\n"
+#![cfg_attr(feature = \"alloc\", feature(global_allocator))]\n\n"
         )?;
 
         let asm = match self.config.arch {
@@ -166,8 +166,7 @@ fn main() {
     {{ regs.rip = {}::fel4_test::run as seL4_Word; }}
     #[cfg(not(feature = \"test\"))]
     {{ regs.rip = {}::run as seL4_Word; }}",
-                    self.config.pkg_module_name,
-                    self.config.pkg_module_name,
+                    self.config.pkg_module_name, self.config.pkg_module_name,
                 )?;
                 writeln!(self.writer, "    regs.rsp = stack_top as seL4_Word;")?;
             }
