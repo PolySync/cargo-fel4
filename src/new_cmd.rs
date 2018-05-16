@@ -58,15 +58,9 @@ fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
     let mut cargo_toml_file = OpenOptions::new()
         .append(true)
         .open(Path::new(&subcmd.path).join("Cargo.toml"))?;
-    cargo_toml_file.write_all(
-        b"libsel4-sys = {git = \"ssh://github.com/PolySync/libsel4-sys.git\", branch = \"devel\"}\n\n",
-    )?;
 
     // Add feL4 dev-dependencies
-    cargo_toml_file.write_all(b"[dev-dependencies]\nwee_alloc = \"0.4\"\nproptest = \"0.7\"\n\n")?;
-
-    // Add feL4 testing features
-    cargo_toml_file.write_all(b"[features]\ndefault = []\nalloc = []\n")?;
+    cargo_toml_file.write_all(CARGO_TOML_TEXT.as_bytes())?;
 
     let mut fel4_toml_file = File::create(Path::new(&subcmd.path).join("fel4.toml"))?;
     fel4_toml_file.write_all(FEL4_TOML_TEXT.as_bytes())?;
@@ -109,3 +103,5 @@ const FEL4_TOML_TEXT: &'static str = include_str!("../configs/fel4.toml");
 const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
 
 const XARGO_TOML_TEXT: &'static str = include_str!("../templates/Xargo.toml");
+
+const CARGO_TOML_TEXT: &'static str = include_str!("../templates/Cargo.toml");
