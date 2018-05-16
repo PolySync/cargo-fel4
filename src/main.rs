@@ -38,5 +38,10 @@ fn main() {
                 error!("failed to run the new command\n{}", e)
             }
         }
+        Fel4SubCmd::TestCmd(c) => {
+            if let Err(e) = cargo_fel4::handle_test_cmd(&c) {
+                error!("failed to run the test command\n{}", e)
+            }
+        }
     }
 }

@@ -47,14 +47,15 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
             .join(&config.fel4_metadata.target_specs_path),
     };
 
-    // Initial build of libsel4-sys to construct kernel, bindings and resolve CMake config
+    // Initial build of libsel4-sys to construct kernel, bindings and resolve CMake
+    // config
     let mut libsel4_build =
         construct_libsel4_build_command(subcmd, &config, &cross_layer_locations);
     run_cmd(&mut libsel4_build)?;
 
-    // Extract the resolved CMake config details and filter down to ones that might be useful
-    // we can move the flag extraction to before the libsel4_build and apply the feature flags
-    // on the very first build!
+    // Extract the resolved CMake config details and filter down to ones that might
+    // be useful we can move the flag extraction to before the libsel4_build
+    // and apply the feature flags on the very first build!
     // TODO - once we can treat the fel4.toml configuration values as canonical,
     let interesting_flags = cache_to_interesting_flags(
         config
@@ -162,6 +163,10 @@ where
 /// will build the root task binary
 ///
 /// Note: Does NOT include application of Rust/Cargo feature flags
+///
+/// TODO: Replace our optional dependency usage with proper
+/// test feature flagging when custom test frameworks are
+/// more feasible in our environment
 fn construct_root_task_build_command<P>(
     subcmd: &BuildCmd,
     config: &Config,
@@ -178,14 +183,17 @@ where
         .arg_if(|| subcmd.release, "--release")
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(config)
+        .arg_if(|| subcmd.tests, "--features")
+        .arg_if(|| subcmd.tests, "test")
         .arg("--target")
         .arg(&config.target)
         .add_locations_as_env_vars(cross_layer_locations);
     root_task_build
 }
 
-/// Common-cause struct for the path data associated with the environment variables
-/// used by cargo-fel4 to communicate across package and process boundaries.
+/// Common-cause struct for the path data associated with the environment
+/// variables used by cargo-fel4 to communicate across package and process
+/// boundaries.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CrossLayerLocations<P: Borrow<Path>> {
     fel4_manifest_path: P,
@@ -193,7 +201,8 @@ pub struct CrossLayerLocations<P: Borrow<Path>> {
     rust_target_path: P,
 }
 
-/// Extension methods for `Command` instances to supply common parameters or metadata
+/// Extension methods for `Command` instances to supply common parameters or
+/// metadata
 trait CommandExt
 where
     Self: Into<Command>,
@@ -203,7 +212,8 @@ where
     where
         P: FnOnce() -> bool;
 
-    /// Populate the command with the environment variables tracked by CrossLayerLocations
+    /// Populate the command with the environment variables tracked by
+    /// CrossLayerLocations
     fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
         &'c mut self,
         cross_layer_locations: &'l CrossLayerLocations<P>,
@@ -250,7 +260,8 @@ impl CommandExt for Command {
             self.arg("--cfg");
             self.arg(format!("feature=\"{}\"", feature));
 
-            // TODO - remove once libsel4-sys updates its feature-flag casing for the temporary debug shim
+            // TODO - remove once libsel4-sys updates its feature-flag casing for the
+            // temporary debug shim
             self.arg("--cfg");
             self.arg(format!("feature=\"{}\"", feature.to_shouty_snake_case()));
         }
@@ -303,7 +314,8 @@ fn merge_feature_flags_with_rustflags_env_var(feature_flags: &[String]) -> Strin
         output.push_str("--cfg ");
         output.push_str(&format!("feature=\"{}\" ", feature));
 
-        // TODO - remove once libsel4-sys updates its feature-flag casing for the temporary debug shim
+        // TODO - remove once libsel4-sys updates its feature-flag casing for the
+        // temporary debug shim
         output.push_str("--cfg ");
         output.push_str(&format!("feature=\"{}\" ", feature.to_shouty_snake_case()));
     }
