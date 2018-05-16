@@ -38,5 +38,11 @@ fn main() {
                 error!("failed to run the new command\n{}", e)
             }
         }
+        // TODO - how to put a dependency on building in debug mode first?
+        Fel4SubCmd::TestCmd(c) => {
+            if let Err(e) = cargo_fel4::handle_test_cmd(&c) {
+                error!("failed to run the test command\n{}", e)
+            }
+        }
     }
 }

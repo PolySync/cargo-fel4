@@ -21,11 +21,13 @@ mod config;
 mod generator;
 mod new_cmd;
 mod simulate_cmd;
+mod test_cmd;
 
 pub use build_cmd::handle_build_cmd;
 pub use config::{gather as gather_config, CargoFel4Cli, Config, Fel4SubCmd};
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;
+pub use test_cmd::handle_test_cmd;
 
 pub enum Error {
     ConfigError(String),
