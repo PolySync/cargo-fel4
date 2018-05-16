@@ -22,6 +22,8 @@ pub enum Fel4SubCmd {
     SimulateCmd(SimulateCmd),
     #[structopt(name = "new", about = "Create a new feL4 project")]
     NewCmd(NewCmd),
+    #[structopt(name = "test", about = "Build and run feL4 tests")]
+    TestCmd(TestCmd),
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -32,6 +34,8 @@ pub struct BuildCmd {
     pub quiet: bool,
     #[structopt(name = "release", long = "release", help = "Build artifacts in release mode")]
     pub release: bool,
+    #[structopt(name = "tests", long = "tests", help = "Build with feL4 test features enabled")]
+    pub tests: bool,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -55,6 +59,22 @@ pub struct NewCmd {
     )]
     pub name: Option<String>,
     pub path: String,
+}
+
+#[derive(Debug, Clone, StructOpt)]
+pub struct TestCmd {
+    #[structopt(name = "verbose", long = "verbose", short = "v", help = "Use verbose output")]
+    pub verbose: bool,
+    #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
+    pub quiet: bool,
+    #[structopt(subcommand)]
+    pub subcmd: Option<TestSubCmd>,
+}
+
+#[derive(Debug, Clone, StructOpt)]
+pub enum TestSubCmd {
+    #[structopt(name = "build", about = "Build the feL4 test suite")]
+    Build,
 }
 
 #[derive(Debug, Clone, Deserialize)]

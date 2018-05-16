@@ -59,8 +59,8 @@ dependencies = [
  "colored 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "heck 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -72,8 +72,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "error-chain 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -240,7 +240,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -250,12 +250,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "serde"
-version = "1.0.53"
+version = "1.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "serde_derive"
-version = "1.0.53"
+version = "1.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -270,7 +270,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "dtoa 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -339,7 +339,7 @@ name = "toml"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -435,8 +435,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum rustc-demangle 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "76d7ba1feafada44f2d38eed812bd2489a03c0f5abb975799251518b68848649"
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
-"checksum serde 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)" = "de4dee3b122edad92d80c66cac8d967ec7f8bf16a3b452247d6eb1dbf83c8f22"
-"checksum serde_derive 1.0.53 (registry+https://github.com/rust-lang/crates.io-index)" = "7149ef7af607b09e0e7df38b1fd74264f08a29a67f604d5cb09d3fbdb1e256bc"
+"checksum serde 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)" = "97f6a6c3caba0cf8f883b53331791036404ce3c1bd895961cf8bb2f8cecfd84b"
+"checksum serde_derive 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)" = "f51b0ef935cf8a41a77bce553da1f8751a739b7ad82dd73669475a22e6ecedb0"
 "checksum serde_json 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "f3ad6d546e765177cf3dded3c2e424a8040f870083a0e64064746b958ece9cb1"
 "checksum strsim 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bb4f380125926a99e52bc279241539c018323fab05ad6368b56f93d9369ff550"
 "checksum structopt 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "d3b96fc11ba8cf80bfa5cdd6de538c9f7c66f519f83e8caabc554e431bf3e36d"
