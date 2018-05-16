@@ -7,7 +7,6 @@ extern crate log;
 extern crate cmake_config;
 #[macro_use]
 extern crate structopt;
-extern crate heck;
 extern crate toml;
 
 use colored::Colorize;

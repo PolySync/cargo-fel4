@@ -14,7 +14,6 @@ use super::{gather_config, run_cmd, Error};
 use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
 use config::{BuildCmd, Config};
 use generator::Generator;
-use heck::ShoutySnakeCase;
 
 pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     if subcmd.verbose {
@@ -219,10 +218,6 @@ where
         cross_layer_locations: &'l CrossLayerLocations<P>,
     ) -> &'c mut Self;
 
-    /// If any flags are present, adds an `--` arg and then adds new arguments
-    /// of the form `--cfg` and  `feature=\"FOO\"`
-    fn add_as_rustc_feature_flags<'c, 'f>(&'c mut self, flags: &'f [String]) -> &'c mut Self;
-
     /// Configures the presence of `--verbose` and `--quiet` flags
     fn add_loudness_args<'c, 'f>(&'c mut self, args: &'f BuildCmd) -> &'c mut Self;
 
@@ -248,23 +243,6 @@ impl CommandExt for Command {
         self.env("FEL4_MANIFEST_PATH", locations.fel4_manifest_path.borrow())
             .env("FEL4_ARTIFACT_PATH", locations.fel4_artifact_path.borrow())
             .env("RUST_TARGET_PATH", locations.rust_target_path.borrow());
-        self
-    }
-
-    fn add_as_rustc_feature_flags<'c, 'f>(&'c mut self, flags: &[String]) -> &mut Self {
-        if flags.is_empty() {
-            return self;
-        }
-        self.arg("--");
-        for feature in flags {
-            self.arg("--cfg");
-            self.arg(format!("feature=\"{}\"", feature));
-
-            // TODO - remove once libsel4-sys updates its feature-flag casing for the
-            // temporary debug shim
-            self.arg("--cfg");
-            self.arg(format!("feature=\"{}\"", feature.to_shouty_snake_case()));
-        }
         self
     }
 
@@ -313,11 +291,6 @@ fn merge_feature_flags_with_rustflags_env_var(feature_flags: &[String]) -> Strin
     for feature in feature_flags {
         output.push_str("--cfg ");
         output.push_str(&format!("feature=\"{}\" ", feature));
-
-        // TODO - remove once libsel4-sys updates its feature-flag casing for the
-        // temporary debug shim
-        output.push_str("--cfg ");
-        output.push_str(&format!("feature=\"{}\" ", feature.to_shouty_snake_case()));
     }
     output
 }
