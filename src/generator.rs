@@ -56,7 +56,7 @@ pub mod sel4_config {\n",
 
         writeln!(
             self.writer,
-            r####"#[cfg(feature = "KERNEL_DEBUG_BUILD")]"####
+            r####"#[cfg(feature = "KernelDebugBuild")]"####
         )?;
         self.writer.write(
             b"#[inline(always)]

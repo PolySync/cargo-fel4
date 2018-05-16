@@ -6,7 +6,6 @@ publish = false
 [dependencies]
 cmake_config = { version = "*", path = "cmake_config" }
 structopt = "0.2"
-heck = "0.3" # Can remove once we transition libsel4-sys' debug feature flag to non-shouty
 serde = "1.0"
 serde_derive = "1.0"
 cargo_metadata = "0.5"
