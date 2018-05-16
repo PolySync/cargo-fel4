@@ -1,6 +1,6 @@
-# Helios/Cargo System Image Subcommand Crate
+# cargo-fel4
 
-- [seL4 workspace](https://bitbucket.org/PolySync/sel4-workspace/overview)
+Tool for automating fel4 (seL4 for Rust) development
 
 ## Install
 
@@ -11,11 +11,13 @@ cargo install --git git@bitbucket.org:PolySync/cargo-fel4.git
 ## Example
 
 ```
-git clone git@bitbucket.org:PolySync/sel4-workspace.git sel4-workspace
+cargo fel4 new my-fel4-project
 
-cargo fel4 build sel4-workspace/Cargo.toml
+cd my-fel4-project
 
-cargo fel4 simulate sel4-workspace/Cargo.toml
+cargo fel4 build
+
+cargo fel4 simulate
 ```
 
 ## Usage
@@ -24,7 +26,7 @@ cargo fel4 simulate sel4-workspace/Cargo.toml
 Build, manage and simulate feL4 system images
 
 Usage:
-    cargo fel4 [options] [build | simulate]
+    cargo fel4 [options] [build | simulate | new]
 
 Options:
     -h, --help                   Print this message
@@ -44,7 +46,7 @@ Resulting in:
 
 Run `cargo fel4 simulate` to simulate a system image with QEMU.
 
-Run `cargo fel4 new` to create a new feL4 package.
+Run `cargo fel4 new` to create a new fel4 package.
 ```
 
 ## Command `build`
@@ -72,3 +74,9 @@ target-specs-path = "targets"
 # the target triple to build for
 target = "x86_64-sel4-fel4"
 ```
+
+## License
+
+cargo-fel4 is released under the MIT license, with additional thanks and attribution to the following:
+* [Robigalia](https://gitlab.com/robigalia/sel4-start/blob/master/LICENSE-MIT), MIT License
+* [seL4](https://github.com/seL4/seL4/blob/master/LICENSE_BSD2.txt), BSD 2-Clause License
