@@ -1,11 +1,8 @@
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
-
 use super::{handle_build_cmd, Error};
 use config::{BuildCmd, TestCmd, TestSubCmd};
 use log;
 use log::LevelFilter;
+use new_cmd::generate_tests_source_files;
 
 pub fn handle_test_cmd(test_cmd: &TestCmd) -> Result<(), Error> {
     if test_cmd.verbose {
@@ -17,7 +14,7 @@ pub fn handle_test_cmd(test_cmd: &TestCmd) -> Result<(), Error> {
     if let Some(ref subcmd) = test_cmd.subcmd {
         match subcmd {
             TestSubCmd::Build => {
-                generate_source_files()?;
+                generate_tests_source_files(None)?;
                 run_test_build(test_cmd)?;
             }
         }
@@ -38,16 +35,3 @@ fn run_test_build(test_cmd: &TestCmd) -> Result<(), Error> {
 
     Ok(())
 }
-
-fn generate_source_files() -> Result<(), Error> {
-    let src_path = Path::new("src").join("fel4_test.rs");
-
-    if !src_path.exists() {
-        let mut test_src_file = File::create(&src_path)?;
-        test_src_file.write_all(TEST_LIB_CODE.as_bytes())?;
-    }
-
-    Ok(())
-}
-
-const TEST_LIB_CODE: &'static str = include_str!("../templates/fel4_test.rs");

@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::{run_cmd, Error};
@@ -23,6 +23,8 @@ pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
     generate_baseline_cargo_package(subcmd)?;
 
     generate_fel4_project_files(subcmd)?;
+
+    generate_tests_source_files(Some(PathBuf::from(&subcmd.path)))?;
 
     generate_target_specs(subcmd)?;
 
@@ -90,6 +92,21 @@ fn generate_target_specs(subcmd: &NewCmd) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn generate_tests_source_files(base_path: Option<PathBuf>) -> Result<(), Error> {
+    let src_path = if let Some(path) = base_path {
+        path.join("src").join("fel4_test.rs")
+    } else {
+        Path::new("src").join("fel4_test.rs")
+    };
+
+    if !src_path.exists() {
+        let mut test_src_file = File::create(&src_path)?;
+        test_src_file.write_all(TEST_LIB_CODE.as_bytes())?;
+    }
+
+    Ok(())
+}
+
 const FEL4_TARGET_SPEC_README: &'static str = include_str!("../target_specs/README.md");
 
 const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
@@ -105,3 +122,5 @@ const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
 const XARGO_TOML_TEXT: &'static str = include_str!("../templates/Xargo.toml");
 
 const CARGO_TOML_TEXT: &'static str = include_str!("../templates/Cargo.toml.part");
+
+const TEST_LIB_CODE: &'static str = include_str!("../templates/fel4_test.rs");
