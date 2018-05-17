@@ -6,6 +6,7 @@ use std::process::Command;
 
 use super::{run_cmd, Error};
 use config::NewCmd;
+use fel4_config::get_exemplar_default_toml;
 use log;
 use log::LevelFilter;
 
@@ -63,7 +64,7 @@ fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
     cargo_toml_file.write_all(CARGO_TOML_TEXT.as_bytes())?;
 
     let mut fel4_toml_file = File::create(Path::new(&subcmd.path).join("fel4.toml"))?;
-    fel4_toml_file.write_all(FEL4_TOML_TEXT.as_bytes())?;
+    fel4_toml_file.write_all(get_exemplar_default_toml().as_bytes())?;
 
     // Create Xargo.toml with our target features
     let mut xargo_toml_file = File::create(Path::new(&subcmd.path).join("Xargo.toml"))?;
@@ -97,8 +98,6 @@ const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
 
 const FEL4_TARGET_SPEC_ARM_SEL4_FEL4: &'static str =
     include_str!("../target_specs/arm-sel4-fel4.json");
-
-const FEL4_TOML_TEXT: &'static str = include_str!("../configs/fel4.toml");
 
 const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
 

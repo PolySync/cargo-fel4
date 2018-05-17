@@ -1,13 +1,11 @@
-#[macro_use]
-extern crate serde_derive;
 extern crate cargo_metadata;
+extern crate cmake_config;
 extern crate colored;
+extern crate fel4_config;
 #[macro_use]
 extern crate log;
-extern crate cmake_config;
 #[macro_use]
 extern crate structopt;
-extern crate toml;
 
 use colored::Colorize;
 use std::fmt;
@@ -42,18 +40,6 @@ impl From<io::Error> for Error {
 
 impl From<cargo_metadata::Error> for Error {
     fn from(e: cargo_metadata::Error) -> Self {
-        Error::ConfigError(format!("{}", e))
-    }
-}
-
-impl From<toml::ser::Error> for Error {
-    fn from(e: toml::ser::Error) -> Self {
-        Error::ConfigError(format!("{}", e))
-    }
-}
-
-impl From<toml::de::Error> for Error {
-    fn from(e: toml::de::Error) -> Self {
         Error::ConfigError(format!("{}", e))
     }
 }

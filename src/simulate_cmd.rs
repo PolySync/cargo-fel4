@@ -4,6 +4,7 @@ use std::process::Command;
 
 use super::{gather_config, run_cmd, Error};
 use config::{Config, SimulateCmd};
+use fel4_config::BuildProfile;
 
 pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
     if subcmd.verbose {
@@ -11,12 +12,16 @@ pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
     } else {
         log::set_max_level(LevelFilter::Error);
     }
+    let build_profile = match subcmd.release {
+        true => BuildProfile::Release,
+        false => BuildProfile::Debug,
+    };
 
-    let config: Config = gather_config()?;
+    let config: Config = gather_config(&build_profile)?;
 
     let sim_script_path = config
         .root_dir
-        .join(&config.fel4_metadata.artifact_path)
+        .join(&config.fel4_config.artifact_path)
         .join("simulate");
 
     if !sim_script_path.exists() {
