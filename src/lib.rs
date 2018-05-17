@@ -21,11 +21,15 @@ mod simulate_cmd;
 mod test_cmd;
 
 pub use build_cmd::handle_build_cmd;
-pub use config::{gather as gather_config, CargoFel4Cli, Config, Fel4SubCmd};
+pub use config::{
+    gather as gather_config, BuildCmd, CargoFel4Cli, Config, Fel4SubCmd, NewCmd, SimulateCmd,
+    TestCmd, TestSubCmd,
+};
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;
 pub use test_cmd::handle_test_cmd;
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
     ConfigError(String),
     IO(String),

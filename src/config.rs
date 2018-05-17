@@ -34,6 +34,14 @@ pub struct BuildCmd {
     pub release: bool,
     #[structopt(name = "tests", long = "tests", help = "Build with feL4 test features enabled")]
     pub tests: bool,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -44,6 +52,14 @@ pub struct SimulateCmd {
     pub quiet: bool,
     #[structopt(name = "release", long = "release", help = "Use artifacts built in release mode")]
     pub release: bool,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -58,7 +74,8 @@ pub struct NewCmd {
         help = "Set the resulting package name, defaults to the directory name"
     )]
     pub name: Option<String>,
-    pub path: String,
+    #[structopt(parse(from_os_str))]
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -69,6 +86,14 @@ pub struct TestCmd {
     pub quiet: bool,
     #[structopt(subcommand)]
     pub subcmd: Option<TestSubCmd>,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -113,9 +138,12 @@ impl Arch {
     }
 }
 
-pub fn gather(build_profile: &BuildProfile) -> Result<Config, Error> {
+pub fn gather<P: AsRef<Path>>(
+    cargo_manifest_path: P,
+    build_profile: &BuildProfile,
+) -> Result<Config, Error> {
     let (pkg_name, pkg_module_name, root_dir) = {
-        let metadata = cargo_metadata::metadata(None)?;
+        let metadata = cargo_metadata::metadata(Some(cargo_manifest_path.as_ref()))?;
         if metadata.packages.len() != 1 {
             return Err(Error::ConfigError(String::from(
                 "a fel4 build requires a singular top-level package",

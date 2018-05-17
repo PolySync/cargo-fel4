@@ -263,7 +263,7 @@ pub extern "C" fn panic_fmt(
 
 #[lang = "eh_personality"]
 #[no_mangle]
-fn eh_personality() {
+pub fn eh_personality() {
     #[cfg(feature = "KernelPrinting")]
     {
         use core::fmt::Write;

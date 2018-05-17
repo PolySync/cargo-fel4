@@ -6,10 +6,10 @@ use log;
 use log::LevelFilter;
 use std::borrow::Borrow;
 use std::collections::HashSet;
-use std::env;
+use std::env::{self, current_dir};
 use std::ffi::OsStr;
-use std::fs::{self, File};
-use std::path::{Path, PathBuf};
+use std::fs::{self, canonicalize, File};
+use std::path::Path;
 use std::process::Command;
 
 use super::{gather_config, run_cmd, Error};
@@ -24,13 +24,14 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
         log::set_max_level(LevelFilter::Error);
     }
 
-    let build_profile = match subcmd.release {
-        true => BuildProfile::Release,
-        false => BuildProfile::Debug,
+    let build_profile = if subcmd.release {
+        BuildProfile::Release
+    } else {
+        BuildProfile::Debug
     };
 
-    let config: Config = gather_config(&build_profile)?;
-    let artifact_path = PathBuf::from(&config.fel4_config.artifact_path);
+    let config: Config = gather_config(&subcmd.cargo_manifest_path, &build_profile)?;
+    let artifact_path = &config.root_dir.join(&config.fel4_config.artifact_path);
 
     let target_build_cache_path = config
         .root_dir
@@ -72,14 +73,17 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     let mut root_file = File::create(root_task_path.join("root-task.rs").as_path())?;
     Generator::new(&mut root_file, &config, &fel4_flags).generate()?;
 
+    if canonicalize(&config.root_dir)? != canonicalize(current_dir()?)? {
+        return Err(Error::ExitStatusError("The build command does not work with a cargo manifest directory that differs from the current working directory due to limitations of Xargo".to_string()));
+    }
     // Build the generated root task binary
     run_cmd(
         &mut construct_root_task_build_command(subcmd, &config, &cross_layer_locations)
             .env("RUSTFLAGS", &rustflags_env_var),
     )?;
 
-    let sysimg_path = artifact_path.clone().join("feL4img");
-    let kernel_path = artifact_path.clone().join("kernel");
+    let sysimg_path = artifact_path.join("feL4img");
+    let kernel_path = artifact_path.join("kernel");
 
     if !artifact_path.exists() {
         fs::create_dir_all(&artifact_path)?;
@@ -179,6 +183,8 @@ where
 
     libsel4_build
         .arg("rustc")
+        .arg("--manifest-path")
+        .arg(&subcmd.cargo_manifest_path)
         .arg_if(|| subcmd.release, "--release")
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(&config.fel4_config.target)
@@ -212,6 +218,8 @@ where
         .arg("rustc")
         .arg("--bin")
         .arg("root-task")
+        .arg("--manifest-path")
+        .arg(&subcmd.cargo_manifest_path)
         .arg_if(|| subcmd.release, "--release")
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(&config.fel4_config.target)

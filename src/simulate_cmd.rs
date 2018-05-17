@@ -17,7 +17,7 @@ pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
         false => BuildProfile::Debug,
     };
 
-    let config: Config = gather_config(&build_profile)?;
+    let config: Config = gather_config(&subcmd.cargo_manifest_path, &build_profile)?;
 
     let sim_script_path = config
         .root_dir
