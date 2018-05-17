@@ -84,10 +84,7 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
 
     let sysimg_path = artifact_path.join("feL4img");
     let kernel_path = artifact_path.join("kernel");
-
-    if !artifact_path.exists() {
-        fs::create_dir_all(&artifact_path)?;
-    }
+    fs::create_dir_all(&artifact_path)?;
 
     // For ARM targets, we currently take advantage of the
     // seL4 elfloader-tool to bootstrap the system and kick
