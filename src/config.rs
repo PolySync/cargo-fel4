@@ -104,9 +104,9 @@ pub struct TestCmd {
 
 #[derive(Debug, Clone, StructOpt)]
 pub enum TestSubCmd {
-    #[structopt(name = "build", about = "Build the feL4 test suite")]
+    #[structopt(name = "build", about = "Build the feL4 test application")]
     Build,
-    #[structopt(name = "simulate", about = "Simulate the feL4 test suite")]
+    #[structopt(name = "simulate", about = "Simulate the feL4 test application")]
     Simulate,
 }
 
@@ -120,28 +120,28 @@ pub struct CleanCmd {
 
 impl Fel4SubCmd {
     /// Determine the appropriate feL4 build profile from the given subcommand.
-    pub fn build_profile(&self) -> Fel4BuildProfile {
+    pub fn build_profile(&self) -> Option<Fel4BuildProfile> {
         match *self {
-            Fel4SubCmd::BuildCmd(ref c) => self.build_mode_to_profile(c.release, c.tests),
-            Fel4SubCmd::SimulateCmd(ref c) => self.build_mode_to_profile(c.release, c.tests),
-            Fel4SubCmd::NewCmd(_) => Fel4BuildProfile::NotApplicable,
-            Fel4SubCmd::TestCmd(ref c) => self.build_mode_to_profile(c.release, true),
-            Fel4SubCmd::CleanCmd(_) => Fel4BuildProfile::NotApplicable,
+            Fel4SubCmd::BuildCmd(ref c) => Some(build_mode_to_profile(c.release, c.tests)),
+            Fel4SubCmd::SimulateCmd(ref c) => Some(build_mode_to_profile(c.release, c.tests)),
+            Fel4SubCmd::NewCmd(_) => None,
+            Fel4SubCmd::TestCmd(ref c) => Some(build_mode_to_profile(c.release, true)),
+            Fel4SubCmd::CleanCmd(_) => None,
         }
     }
+}
 
-    fn build_mode_to_profile(&self, is_release: bool, is_test: bool) -> Fel4BuildProfile {
-        if is_test {
-            if is_release {
-                Fel4BuildProfile::TestRelease
-            } else {
-                Fel4BuildProfile::TestDebug
-            }
-        } else if is_release {
-            Fel4BuildProfile::Release
+fn build_mode_to_profile(is_release: bool, is_test: bool) -> Fel4BuildProfile {
+    if is_test {
+        if is_release {
+            Fel4BuildProfile::TestRelease
         } else {
-            Fel4BuildProfile::Debug
+            Fel4BuildProfile::TestDebug
         }
+    } else if is_release {
+        Fel4BuildProfile::Release
+    } else {
+        Fel4BuildProfile::Debug
     }
 }
 
@@ -153,7 +153,7 @@ pub struct Config {
     /// The module name of the user application's package
     pub pkg_module_name: String,
     pub arch: Arch,
-    pub build_profile: Fel4BuildProfile,
+    pub build_profile: Option<Fel4BuildProfile>,
     pub fel4_config: Fel4Config,
 }
 
@@ -190,7 +190,6 @@ impl Arch {
 /// - test-release
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Fel4BuildProfile {
-    NotApplicable,
     Debug,
     Release,
     TestDebug,
@@ -200,7 +199,6 @@ pub enum Fel4BuildProfile {
 impl Fel4BuildProfile {
     pub fn artifact_subdir_path(&self) -> PathBuf {
         match *self {
-            Fel4BuildProfile::NotApplicable => PathBuf::new(),
             Fel4BuildProfile::Debug => PathBuf::from("debug"),
             Fel4BuildProfile::Release => PathBuf::from("release"),
             Fel4BuildProfile::TestDebug => PathBuf::from("test").join("debug"),
@@ -210,7 +208,6 @@ impl Fel4BuildProfile {
 
     pub fn as_fel4_config_build_profile(&self) -> ConfigBuildProfile {
         match *self {
-            Fel4BuildProfile::NotApplicable => ConfigBuildProfile::Debug,
             Fel4BuildProfile::Debug => ConfigBuildProfile::Debug,
             Fel4BuildProfile::Release => ConfigBuildProfile::Release,
             Fel4BuildProfile::TestDebug => ConfigBuildProfile::Debug,
@@ -221,15 +218,15 @@ impl Fel4BuildProfile {
 
 pub fn gather(cmd: &Fel4SubCmd) -> Result<Config, Error> {
     let cargo_manifest_path = match cmd {
-        Fel4SubCmd::BuildCmd(c) => &c.cargo_manifest_path,
-        Fel4SubCmd::SimulateCmd(c) => &c.cargo_manifest_path,
-        Fel4SubCmd::TestCmd(c) => &c.cargo_manifest_path,
-        Fel4SubCmd::NewCmd(_) => Path::new("./Cargo.toml"),
-        Fel4SubCmd::CleanCmd(_) => Path::new("./Cargo.toml"),
+        Fel4SubCmd::BuildCmd(c) => Path::new(&c.cargo_manifest_path).to_path_buf(),
+        Fel4SubCmd::SimulateCmd(c) => Path::new(&c.cargo_manifest_path).to_path_buf(),
+        Fel4SubCmd::TestCmd(c) => Path::new(&c.cargo_manifest_path).to_path_buf(),
+        Fel4SubCmd::NewCmd(c) => Path::new(&c.path).join("Cargo.toml"),
+        Fel4SubCmd::CleanCmd(_) => Path::new("./Cargo.toml").to_path_buf(),
     };
 
     let (pkg_name, pkg_module_name, root_dir) = {
-        let metadata = cargo_metadata::metadata(Some(cargo_manifest_path))?;
+        let metadata = cargo_metadata::metadata(Some(&cargo_manifest_path))?;
         if metadata.packages.len() != 1 {
             return Err(Error::ConfigError(String::from(
                 "a fel4 build requires a singular top-level package",
@@ -250,13 +247,20 @@ pub fn gather(cmd: &Fel4SubCmd) -> Result<Config, Error> {
 
     let build_profile = cmd.build_profile();
 
-    let fel4_config: Fel4Config = match get_fel4_config(
-        root_dir.join("fel4.toml"),
-        &build_profile.as_fel4_config_build_profile(),
-    ) {
-        Ok(f) => f,
-        Err(e) => return Err(Error::ConfigError(format!("{}", e))),
+    let config_build_profile = if let Some(p) = build_profile {
+        p.as_fel4_config_build_profile()
+    } else {
+        // TODO - better error message
+        return Err(Error::ConfigError(
+            "The build profile could not determined".to_string(),
+        ));
     };
+
+    let fel4_config: Fel4Config =
+        match get_fel4_config(root_dir.join("fel4.toml"), &config_build_profile) {
+            Ok(f) => f,
+            Err(e) => return Err(Error::ConfigError(format!("{}", e))),
+        };
 
     // TODO - skip the trip through strings!
     let arch = Arch::from_target_str(fel4_config.target.full_name())?;

@@ -26,12 +26,28 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
 
     let config: Config = gather_config(&Fel4SubCmd::BuildCmd(subcmd.clone()))?;
 
-    let build_profile = config.build_profile.as_fel4_config_build_profile();
+    let build_profile = if let Some(p) = config.build_profile {
+        p.as_fel4_config_build_profile()
+    } else {
+        // TODO - better error message
+        return Err(Error::ConfigError(
+            "The build profile could not determined".to_string(),
+        ));
+    };
+
+    let artifact_profile_subdir = if let Some(p) = config.build_profile {
+        p.artifact_subdir_path()
+    } else {
+        // TODO - better error message
+        return Err(Error::ConfigError(
+            "The build profile could not determined".to_string(),
+        ));
+    };
 
     let artifact_path = &config
         .root_dir
         .join(&config.fel4_config.artifact_path)
-        .join(config.build_profile.artifact_subdir_path());
+        .join(artifact_profile_subdir);
 
     let target_build_cache_path = config
         .root_dir

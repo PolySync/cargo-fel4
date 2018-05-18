@@ -15,9 +15,18 @@ pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
 
     let config: Config = gather_config(&Fel4SubCmd::SimulateCmd(subcmd.clone()))?;
 
+    let artifact_profile_subdir = if let Some(p) = config.build_profile {
+        p.artifact_subdir_path()
+    } else {
+        // TODO - better error message
+        return Err(Error::ConfigError(
+            "The build profile could not determined".to_string(),
+        ));
+    };
+
     let artifact_path = Path::new(&config.root_dir)
         .join(config.fel4_config.artifact_path)
-        .join(config.build_profile.artifact_subdir_path());
+        .join(artifact_profile_subdir);
 
     let sim_script_path = artifact_path.join("simulate");
 

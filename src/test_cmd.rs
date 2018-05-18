@@ -13,7 +13,7 @@ pub fn handle_test_cmd(test_cmd: &TestCmd) -> Result<(), Error> {
 
     match test_cmd.subcmd {
         TestSubCmd::Build => {
-            generate_tests_source_files(None)?;
+            generate_tests_source_files(Some(test_cmd.cargo_manifest_path.clone()))?;
             run_test_build(test_cmd)?;
         }
         TestSubCmd::Simulate => run_test_simulation(test_cmd)?,
