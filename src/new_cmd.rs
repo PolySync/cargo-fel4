@@ -1,11 +1,12 @@
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::{run_cmd, Error};
 use config::NewCmd;
+use fel4_config::get_exemplar_default_toml;
 use log;
 use log::LevelFilter;
 
@@ -23,6 +24,8 @@ pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
     generate_baseline_cargo_package(subcmd)?;
 
     generate_fel4_project_files(subcmd)?;
+
+    generate_tests_source_files(Some(subcmd.path.clone()))?;
 
     generate_target_specs(subcmd)?;
 
@@ -63,7 +66,7 @@ fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
     cargo_toml_file.write_all(CARGO_TOML_TEXT.as_bytes())?;
 
     let mut fel4_toml_file = File::create(Path::new(&subcmd.path).join("fel4.toml"))?;
-    fel4_toml_file.write_all(FEL4_TOML_TEXT.as_bytes())?;
+    fel4_toml_file.write_all(get_exemplar_default_toml().as_bytes())?;
 
     // Create Xargo.toml with our target features
     let mut xargo_toml_file = File::create(Path::new(&subcmd.path).join("Xargo.toml"))?;
@@ -90,6 +93,21 @@ fn generate_target_specs(subcmd: &NewCmd) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn generate_tests_source_files(base_path: Option<PathBuf>) -> Result<(), Error> {
+    let src_path = if let Some(path) = base_path {
+        path.join("src").join("fel4_test.rs")
+    } else {
+        Path::new("src").join("fel4_test.rs")
+    };
+
+    if !src_path.exists() {
+        let mut test_src_file = File::create(&src_path)?;
+        test_src_file.write_all(TEST_LIB_CODE.as_bytes())?;
+    }
+
+    Ok(())
+}
+
 const FEL4_TARGET_SPEC_README: &'static str = include_str!("../target_specs/README.md");
 
 const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
@@ -98,10 +116,10 @@ const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
 const FEL4_TARGET_SPEC_ARM_SEL4_FEL4: &'static str =
     include_str!("../target_specs/arm-sel4-fel4.json");
 
-const FEL4_TOML_TEXT: &'static str = include_str!("../configs/fel4.toml");
-
 const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
 
 const XARGO_TOML_TEXT: &'static str = include_str!("../templates/Xargo.toml");
 
 const CARGO_TOML_TEXT: &'static str = include_str!("../templates/Cargo.toml.part");
+
+const TEST_LIB_CODE: &'static str = include_str!("../templates/fel4_test.rs");

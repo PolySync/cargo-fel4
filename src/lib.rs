@@ -1,14 +1,11 @@
-#[macro_use]
-extern crate serde_derive;
 extern crate cargo_metadata;
+extern crate cmake_config;
 extern crate colored;
+extern crate fel4_config;
 #[macro_use]
 extern crate log;
-extern crate cmake_config;
 #[macro_use]
 extern crate structopt;
-extern crate heck;
-extern crate toml;
 
 use colored::Colorize;
 use std::fmt;
@@ -16,6 +13,7 @@ use std::io;
 use std::process::Command;
 
 mod build_cmd;
+mod clean_cmd;
 mod cmake_codegen;
 mod config;
 mod generator;
@@ -24,11 +22,16 @@ mod simulate_cmd;
 mod test_cmd;
 
 pub use build_cmd::handle_build_cmd;
-pub use config::{gather as gather_config, CargoFel4Cli, Config, Fel4SubCmd};
+pub use clean_cmd::handle_clean_cmd;
+pub use config::{
+    gather as gather_config, BuildCmd, CargoFel4Cli, Config, Fel4SubCmd, NewCmd, SimulateCmd,
+    TestCmd, TestSubCmd,
+};
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;
 pub use test_cmd::handle_test_cmd;
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
     ConfigError(String),
     IO(String),
@@ -43,18 +46,6 @@ impl From<io::Error> for Error {
 
 impl From<cargo_metadata::Error> for Error {
     fn from(e: cargo_metadata::Error) -> Self {
-        Error::ConfigError(format!("{}", e))
-    }
-}
-
-impl From<toml::ser::Error> for Error {
-    fn from(e: toml::ser::Error) -> Self {
-        Error::ConfigError(format!("{}", e))
-    }
-}
-
-impl From<toml::de::Error> for Error {
-    fn from(e: toml::de::Error) -> Self {
         Error::ConfigError(format!("{}", e))
     }
 }

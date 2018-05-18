@@ -1,8 +1,8 @@
 use std::io::Write;
 
 use super::Error;
-use cmake_codegen::flags_to_rust_writer;
-use cmake_config::RawFlag;
+use cmake_codegen::simple_flags_to_rust_writer;
+use cmake_config::SimpleFlag;
 use config::{Arch, Config};
 
 const ARM_ASM: &'static str = include_str!("asm/arm.s");
@@ -12,18 +12,18 @@ const X86_64_ASM: &'static str = include_str!("asm/x86_64.s");
 pub struct Generator<'a, 'b, 'c, W: Write + 'a> {
     writer: &'a mut W,
     config: &'b Config,
-    cmake_flags: &'c [RawFlag],
+    flags: &'c [SimpleFlag],
 }
 
 impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
-    pub fn new(writer: &'a mut W, config: &'b Config, cmake_flags: &'c [RawFlag]) -> Self
+    pub fn new(writer: &'a mut W, config: &'b Config, flags: &'c [SimpleFlag]) -> Self
     where
         W: Write,
     {
         Self {
             writer,
             config,
-            cmake_flags,
+            flags,
         }
     }
 
@@ -49,15 +49,12 @@ use sel4_sys::*;\n\n",
 #[allow(non_upper_case_globals)]
 pub mod sel4_config {\n",
         )?;
-        flags_to_rust_writer(self.cmake_flags, self.writer, 4)?;
+        simple_flags_to_rust_writer(self.flags, self.writer, 4)?;
         self.writer.write(b"}\n\n")?;
 
         self.writer.write(BOOT_INFO_AND_LANG_ITEM_CODE.as_bytes())?;
 
-        writeln!(
-            self.writer,
-            r####"#[cfg(feature = "KERNEL_DEBUG_BUILD")]"####
-        )?;
+        writeln!(self.writer, r####"#[cfg(feature = "KernelDebugBuild")]"####)?;
         self.writer.write(
             b"#[inline(always)]
 pub fn debug_halt() {
@@ -173,8 +170,11 @@ fn main() {
             Arch::Arm => {
                 writeln!(
                     self.writer,
-                    "    regs.pc = {}::run as seL4_Word;",
-                    self.config.pkg_module_name
+                    "    #[cfg(feature = \"test\")]
+    {{ regs.pc = {}::fel4_test::run as seL4_Word; }}
+    #[cfg(not(feature = \"test\"))]
+    {{ regs.pc = {}::run as seL4_Word; }}",
+                    self.config.pkg_module_name, self.config.pkg_module_name
                 )?;
                 writeln!(self.writer, "    regs.sp = stack_top as seL4_Word;")?;
             }
@@ -238,7 +238,7 @@ fn lang_start<T: Termination + 'static>(
 
 #[lang = "panic_fmt"]
 #[no_mangle]
-extern "C" fn panic_fmt(
+pub extern "C" fn panic_fmt(
     fmt: core::fmt::Arguments,
     file: &'static str,
     line: u32,
@@ -266,7 +266,7 @@ extern "C" fn panic_fmt(
 
 #[lang = "eh_personality"]
 #[no_mangle]
-fn eh_personality() {
+pub fn eh_personality() {
     #[cfg(feature = "KernelPrinting")]
     {
         use core::fmt::Write;
@@ -282,7 +282,7 @@ fn eh_personality() {
 
 #[lang = "oom"]
 #[no_mangle]
-extern "C" fn oom() -> ! {
+pub extern "C" fn oom() -> ! {
     #[cfg(feature = "KernelPrinting")]
     {
         use core::fmt::Write;
