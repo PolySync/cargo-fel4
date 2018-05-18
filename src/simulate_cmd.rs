@@ -12,6 +12,10 @@ pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
     } else {
         log::set_max_level(LevelFilter::Error);
     }
+    let build_profile = match subcmd.release {
+        true => BuildProfile::Release,
+        false => BuildProfile::Debug,
+    };
 
     let config: Config = gather_config(&Fel4SubCmd::SimulateCmd(subcmd.clone()))?;
 

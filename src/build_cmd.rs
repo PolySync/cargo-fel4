@@ -34,6 +34,9 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
         .join(&config.fel4_config.artifact_path)
         .join(config.build_profile.artifact_subdir_path());
 
+    let config: Config = gather_config(&subcmd.cargo_manifest_path, &build_profile)?;
+    let artifact_path = &config.root_dir.join(&config.fel4_config.artifact_path);
+
     let target_build_cache_path = config
         .root_dir
         .join("target")
