@@ -26,16 +26,12 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
 
     let config: Config = gather_config(&Fel4SubCmd::BuildCmd(subcmd.clone()))?;
 
-    // TODO - merge fel4_config::BuildPofile with cargo_fel4::Fel4BuildProfile
     let build_profile = config.build_profile.as_fel4_config_build_profile();
 
     let artifact_path = &config
         .root_dir
         .join(&config.fel4_config.artifact_path)
         .join(config.build_profile.artifact_subdir_path());
-
-    let config: Config = gather_config(&subcmd.cargo_manifest_path, &build_profile)?;
-    let artifact_path = &config.root_dir.join(&config.fel4_config.artifact_path);
 
     let target_build_cache_path = config
         .root_dir
