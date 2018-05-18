@@ -170,8 +170,11 @@ fn main() {
             Arch::Arm => {
                 writeln!(
                     self.writer,
-                    "    regs.pc = {}::run as seL4_Word;",
-                    self.config.pkg_module_name
+                    "    #[cfg(feature = \"test\")]
+    {{ regs.pc = {}::fel4_test::run as seL4_Word; }}
+    #[cfg(not(feature = \"test\"))]
+    {{ regs.pc = {}::run as seL4_Word; }}",
+                    self.config.pkg_module_name, self.config.pkg_module_name
                 )?;
                 writeln!(self.writer, "    regs.sp = stack_top as seL4_Word;")?;
             }

@@ -25,7 +25,7 @@ pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
 
     generate_fel4_project_files(subcmd)?;
 
-    generate_tests_source_files(Some(PathBuf::from(&subcmd.path)))?;
+    generate_tests_source_files(Some(subcmd.path.clone()))?;
 
     generate_target_specs(subcmd)?;
 
