@@ -87,7 +87,7 @@ pub enum CMakeType {
 
 /// A pared-down and interpreted representation
 /// of a CMake flag
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum SimpleFlag {
     Stringish(Key, String),
     Boolish(Key, bool),
@@ -97,7 +97,7 @@ pub enum SimpleFlag {
 /// of a CMake flag. Mostly here to avoid confusion
 /// between the similarly-shaped key and value of a
 /// `SimpleFlag::Stringish` variant.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Key(pub String);
 
 impl<S> From<S> for Key

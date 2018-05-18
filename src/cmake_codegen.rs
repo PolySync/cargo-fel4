@@ -40,18 +40,17 @@ pub fn cache_to_interesting_flags<P: AsRef<Path>>(
     Ok(filter_to_interesting_flags(all_flags))
 }
 
-pub fn flags_to_rust_writer<'a, I, W: Write>(
+pub fn simple_flags_to_rust_writer<'a, I, W: Write>(
     flags: I,
     writer: &mut W,
     indent_spaces: usize,
 ) -> Result<(), CMakeCodegenError>
 where
-    I: IntoIterator<Item = &'a RawFlag>,
+    I: IntoIterator<Item = &'a SimpleFlag>,
 {
     let mut identifiers: HashSet<String> = HashSet::new();
     for flag in flags {
-        let simplified = SimpleFlag::from(flag);
-        let RustConstItem { code, identifier } = simplified.generate_rust_const_item()?;
+        let RustConstItem { code, identifier } = flag.generate_rust_const_item()?;
         if identifiers.contains(&identifier) {
             return Err(CMakeCodegenError::DuplicateIdentifiers(identifier));
         } else {
@@ -67,24 +66,20 @@ pub fn truthy_boolean_flags_as_rust_identifiers<'a, I>(
     flags: I,
 ) -> Result<Vec<String>, CMakeCodegenError>
 where
-    I: IntoIterator<Item = &'a RawFlag>,
+    I: IntoIterator<Item = &'a SimpleFlag>,
 {
     let mut out = Vec::new();
-    for active_cmake_bool_prop in flags
-        .into_iter()
-        .filter(|f| f.cmake_type == CMakeType::Bool)
-        .map(SimpleFlag::from)
-        .filter_map(|f| match f {
-            SimpleFlag::Stringish(_, _) => None,
-            SimpleFlag::Boolish(Key(_), false) => None,
-            SimpleFlag::Boolish(Key(k), true) => Some(k),
-        }) {
-        if !is_valid_rust_identifier(&active_cmake_bool_prop) {
+    for active_cmake_bool_prop in flags.into_iter().filter_map(|f| match f {
+        SimpleFlag::Stringish(_, _) => None,
+        SimpleFlag::Boolish(Key(_), false) => None,
+        SimpleFlag::Boolish(Key(k), true) => Some(k),
+    }) {
+        if !is_valid_rust_identifier(active_cmake_bool_prop) {
             return Err(CMakeCodegenError::GenerationError(
-                RustCodeGenerationError::InvalidIdentifier(active_cmake_bool_prop),
+                RustCodeGenerationError::InvalidIdentifier(active_cmake_bool_prop.to_string()),
             ));
         }
-        out.push(active_cmake_bool_prop)
+        out.push(active_cmake_bool_prop.to_string())
     }
     Ok(out)
 }
@@ -138,17 +133,13 @@ mod tests {
     use std::str;
     #[test]
     fn indentation_control() {
-        let f = RawFlag {
-            key: "A".into(),
-            cmake_type: CMakeType::Bool,
-            value: "ON".into(),
-        };
+        let f = SimpleFlag::Boolish(Key("A".to_string()), true);
         let mut a: Vec<u8> = Vec::new();
-        flags_to_rust_writer(&[f.clone()], &mut a, 0).expect("Oh no");
+        simple_flags_to_rust_writer(&[f.clone()], &mut a, 0).expect("Oh no");
         assert_eq!("pub const A:bool = true;\n", str::from_utf8(&a).unwrap());
 
         let mut b: Vec<u8> = Vec::new();
-        flags_to_rust_writer(&[f.clone()], &mut b, 4).expect("Oh no");
+        simple_flags_to_rust_writer(&[f.clone()], &mut b, 4).expect("Oh no");
         assert_eq!(
             "    pub const A:bool = true;\n",
             str::from_utf8(&b).unwrap()

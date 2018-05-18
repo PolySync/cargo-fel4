@@ -29,6 +29,7 @@ fn run_test_build(test_cmd: &TestCmd) -> Result<(), Error> {
         quiet: test_cmd.quiet,
         release: false,
         tests: true,
+        cargo_manifest_path: test_cmd.cargo_manifest_path.clone(),
     };
 
     handle_build_cmd(&build_cmd)?;

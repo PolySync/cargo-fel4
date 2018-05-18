@@ -1,9 +1,7 @@
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use cargo_metadata;
-use toml::Value;
+use fel4_config::{get_fel4_config, BuildProfile, Fel4Config};
 
 use super::Error;
 
@@ -36,6 +34,14 @@ pub struct BuildCmd {
     pub release: bool,
     #[structopt(name = "tests", long = "tests", help = "Build with feL4 test features enabled")]
     pub tests: bool,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -44,6 +50,16 @@ pub struct SimulateCmd {
     pub verbose: bool,
     #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
     pub quiet: bool,
+    #[structopt(name = "release", long = "release", help = "Use artifacts built in release mode")]
+    pub release: bool,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -58,7 +74,8 @@ pub struct NewCmd {
         help = "Set the resulting package name, defaults to the directory name"
     )]
     pub name: Option<String>,
-    pub path: String,
+    #[structopt(parse(from_os_str))]
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -69,6 +86,14 @@ pub struct TestCmd {
     pub quiet: bool,
     #[structopt(subcommand)]
     pub subcmd: Option<TestSubCmd>,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -77,25 +102,14 @@ pub enum TestSubCmd {
     Build,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct Fel4Metadata {
-    #[serde(rename = "artifact-path")]
-    pub artifact_path: PathBuf,
-    #[serde(rename = "target-specs-path")]
-    pub target_specs_path: PathBuf,
-    pub target: String,
-    pub platform: String,
-}
-
 #[derive(Debug, Clone)]
 pub struct Config {
     pub root_dir: PathBuf,
     /// The end user application's package name
     pub pkg_name: String,
     pub pkg_module_name: String,
-    pub target: String,
     pub arch: Arch,
-    pub fel4_metadata: Fel4Metadata,
+    pub fel4_config: Fel4Config,
 }
 
 #[allow(non_camel_case_types)]
@@ -124,9 +138,12 @@ impl Arch {
     }
 }
 
-pub fn gather() -> Result<Config, Error> {
+pub fn gather<P: AsRef<Path>>(
+    cargo_manifest_path: P,
+    build_profile: &BuildProfile,
+) -> Result<Config, Error> {
     let (pkg_name, pkg_module_name, root_dir) = {
-        let metadata = cargo_metadata::metadata(None)?;
+        let metadata = cargo_metadata::metadata(Some(cargo_manifest_path.as_ref()))?;
         if metadata.packages.len() != 1 {
             return Err(Error::ConfigError(String::from(
                 "a fel4 build requires a singular top-level package",
@@ -145,32 +162,19 @@ pub fn gather() -> Result<Config, Error> {
         (pkg.name.clone(), pkg.name.replace("-", "_"), mani_path)
     };
 
-    let fel4_metadata: Fel4Metadata = {
-        let mut fel4_conf_path = root_dir.join("fel4.toml");
-        let mut fel4_conf_file = File::open(fel4_conf_path.as_path())?;
-        let mut contents = String::new();
-        fel4_conf_file.read_to_string(&mut contents)?;
-        let fel4_conf_toml = contents.parse::<Value>()?;
-        let fel4_table = match fel4_conf_toml.get("fel4") {
-            Some(f) => f,
-            None => {
-                return Err(Error::ConfigError(String::from(
-                    "fel4.toml file is missing fel4 section",
-                )))
-            }
-        };
-        fel4_table.clone().try_into()?
+    let fel4_config: Fel4Config = match get_fel4_config(root_dir.join("fel4.toml"), build_profile) {
+        Ok(f) => f,
+        Err(e) => return Err(Error::ConfigError(format!("{}", e))),
     };
 
-    let target = fel4_metadata.target.clone();
-    let arch = Arch::from_target_str(&target)?;
+    // TODO - skip the trip through strings!
+    let arch = Arch::from_target_str(fel4_config.target.full_name())?;
 
     Ok(Config {
         root_dir,
         pkg_name,
         pkg_module_name,
         arch,
-        target,
-        fel4_metadata,
+        fel4_config,
     })
 }
