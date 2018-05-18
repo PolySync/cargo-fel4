@@ -43,5 +43,10 @@ fn main() {
                 error!("failed to run the test command\n{}", e)
             }
         }
+        Fel4SubCmd::CleanCmd(c) => {
+            if let Err(e) = cargo_fel4::handle_clean_cmd(&c) {
+                error!("failed to run the clean command\n{}", e)
+            }
+        }
     }
 }

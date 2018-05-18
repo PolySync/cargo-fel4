@@ -13,6 +13,7 @@ use std::io;
 use std::process::Command;
 
 mod build_cmd;
+mod clean_cmd;
 mod cmake_codegen;
 mod config;
 mod generator;
@@ -21,6 +22,7 @@ mod simulate_cmd;
 mod test_cmd;
 
 pub use build_cmd::handle_build_cmd;
+pub use clean_cmd::handle_clean_cmd;
 pub use config::{
     gather as gather_config, BuildCmd, CargoFel4Cli, Config, Fel4SubCmd, NewCmd, SimulateCmd,
     TestCmd, TestSubCmd,

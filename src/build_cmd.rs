@@ -1,7 +1,7 @@
 extern crate cargo_metadata;
 
 use cmake_config::{Key, SimpleFlag};
-use fel4_config::{BuildProfile, FlatTomlValue, SupportedTarget};
+use fel4_config::{FlatTomlValue, SupportedTarget};
 use log;
 use log::LevelFilter;
 use std::borrow::Borrow;
@@ -14,7 +14,7 @@ use std::process::Command;
 
 use super::{gather_config, run_cmd, Error};
 use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
-use config::{BuildCmd, Config};
+use config::{BuildCmd, Config, Fel4SubCmd};
 use generator::Generator;
 
 pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
@@ -24,14 +24,30 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
         log::set_max_level(LevelFilter::Error);
     }
 
-    let build_profile = if subcmd.release {
-        BuildProfile::Release
+    let config: Config = gather_config(&Fel4SubCmd::BuildCmd(subcmd.clone()))?;
+
+    let build_profile = if let Some(p) = config.build_profile {
+        p.as_fel4_config_build_profile()
     } else {
-        BuildProfile::Debug
+        // TODO - better error message
+        return Err(Error::ConfigError(
+            "The build profile could not determined".to_string(),
+        ));
     };
 
-    let config: Config = gather_config(&subcmd.cargo_manifest_path, &build_profile)?;
-    let artifact_path = &config.root_dir.join(&config.fel4_config.artifact_path);
+    let artifact_profile_subdir = if let Some(p) = config.build_profile {
+        p.artifact_subdir_path()
+    } else {
+        // TODO - better error message
+        return Err(Error::ConfigError(
+            "The build profile could not determined".to_string(),
+        ));
+    };
+
+    let artifact_path = &config
+        .root_dir
+        .join(&config.fel4_config.artifact_path)
+        .join(artifact_profile_subdir);
 
     let target_build_cache_path = config
         .root_dir
