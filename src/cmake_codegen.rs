@@ -81,6 +81,10 @@ where
         }
         out.push(active_cmake_bool_prop.to_string())
     }
+
+    // sort the result so that we get a deterministic order
+    out.sort();
+
     Ok(out)
 }
 impl From<CMakeCodegenError> for Error {
