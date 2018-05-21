@@ -66,7 +66,7 @@ lazy_static! {
 }
 
 /// Represents a single CMake property
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct RawFlag {
     pub key: String,
     pub cmake_type: CMakeType,
@@ -74,7 +74,7 @@ pub struct RawFlag {
 }
 
 /// The type hint associated with a CMake property
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub enum CMakeType {
     Bool,
     Path,
@@ -87,7 +87,7 @@ pub enum CMakeType {
 
 /// A pared-down and interpreted representation
 /// of a CMake flag
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum SimpleFlag {
     Stringish(Key, String),
     Boolish(Key, bool),
@@ -97,7 +97,7 @@ pub enum SimpleFlag {
 /// of a CMake flag. Mostly here to avoid confusion
 /// between the similarly-shaped key and value of a
 /// `SimpleFlag::Stringish` variant.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Key(pub String);
 
 impl<S> From<S> for Key
@@ -168,7 +168,7 @@ impl SimpleFlag {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub struct RustConstItem {
     pub code: String,
     pub identifier: String,
@@ -180,7 +180,7 @@ pub fn is_valid_rust_identifier<S: AsRef<str>>(s: S) -> bool {
     RUST_VALID_IDENTIFIER_REGEX.is_match(s.as_ref())
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum RustCodeGenerationError {
     InvalidIdentifier(String),
     InvalidStringLiteral(String),

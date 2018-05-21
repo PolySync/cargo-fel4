@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use super::{run_cmd, Error};
@@ -25,7 +25,7 @@ pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
 
     generate_fel4_project_files(subcmd)?;
 
-    generate_tests_source_files(Some(subcmd.path.clone()))?;
+    generate_tests_source_files(Some(&subcmd.path))?;
 
     generate_target_specs(subcmd)?;
 
@@ -93,16 +93,18 @@ fn generate_target_specs(subcmd: &NewCmd) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn generate_tests_source_files(base_path: Option<PathBuf>) -> Result<(), Error> {
-    let src_path = if let Some(path) = base_path {
+pub fn generate_tests_source_files(base_dir: Option<&Path>) -> Result<(), Error> {
+    let src_path = if let Some(path) = base_dir {
         path.join("src").join("fel4_test.rs")
     } else {
         Path::new("src").join("fel4_test.rs")
     };
 
     if !src_path.exists() {
-        let mut test_src_file = File::create(&src_path)?;
-        test_src_file.write_all(TEST_LIB_CODE.as_bytes())?;
+        let mut test_src_file = File::create(&src_path)
+            .map_err(|e| Error::IO(format!("Could not create fel4_test.rs {}", e)))?;
+        test_src_file.write_all(TEST_LIB_CODE.as_bytes())
+            .map_err(|e| Error::IO(format!("Could not write to fel4_test.rs {}", e)))?;
     }
 
     Ok(())
