@@ -88,7 +88,7 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     fs::create_dir_all(&root_task_path).map_err(|e| Error::IO(format!("Difficulty creating directory, {:?} : {}", &root_task_path, e)))?;
     let mut root_file = File::create(root_task_path.join("root-task.rs").as_path())
         .map_err(|e| Error::IO(format!("Could not create root-task file. {}", e)))?;
-    Generator::new(&mut root_file, &config, &fel4_flags).generate()?;
+    Generator::new(&mut root_file, &config.pkg_module_name, &config.arch, &fel4_flags).generate()?;
 
 
     match is_current_dir_root_dir(&config.root_dir) {
