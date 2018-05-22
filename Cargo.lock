@@ -173,7 +173,7 @@ dependencies = [
 [[package]]
 name = "fel4-config"
 version = "0.1.0"
-source = "git+ssh://github.com/PolySync/fel4-config.git#608b0f6a4fd0d39093d85f4728862e90d70ea2e0"
+source = "git+ssh://github.com/PolySync/fel4-config.git#789d9470de1f6138c2f6ac6efb10c7ee2ed566d1"
 dependencies = [
  "cmake 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",

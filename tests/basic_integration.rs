@@ -117,7 +117,7 @@ sequential_test! {
 }
 
 fn replace_target_with_arm(fel4_manifest_path: &Path) {
-    // Replace the default x86_64 target and pc99 platform with arm and sabre,
+    // Replace the default x86_64 target and pc99 platform with armv7 and sabre,
     // respectively
     let original = {
         let mut file = File::open(&fel4_manifest_path).expect("Could not open fel4.toml");
@@ -128,7 +128,7 @@ fn replace_target_with_arm(fel4_manifest_path: &Path) {
     };
     let contents = original.replace(
         "target = \"x86_64-sel4-fel4\"",
-        "target = \"arm-sel4-fel4\"",
+        "target = \"armv7-sel4-fel4\"",
     );
     let contents = contents.replace("platform = \"pc99\"", "platform = \"sabre\"");
     let mut file = File::create(&fel4_manifest_path).expect("Could not recreate fel4 manifest");
@@ -140,7 +140,7 @@ sequential_test! {
     fn cargo_fel4_arm_build_works_on_new_project() {
         enable_detailed_logging();
         let d = TempDir::new().expect("Could not create temp dir");
-        let target_dir: PathBuf = d.path().join("arm").into();
+        let target_dir: PathBuf = d.path().join("armv7").into();
         let target_cargo_manifest = target_dir.clone().join("Cargo.toml");
         run_fel4_new(&target_dir);
 

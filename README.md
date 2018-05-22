@@ -111,7 +111,7 @@ my-project/
 │   ├── fel4_test.rs
 │   └── lib.rs
 ├── target_specs
-│   ├── arm-sel4-fel4.json
+│   ├── armv7-sel4-fel4.json
 │   ├── README.md
 │   └── x86_64-sel4-fel4.json
 └── Xargo.toml

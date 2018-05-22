@@ -2,7 +2,7 @@
 
 cargo-fel4 ships with support for the following targets:
 
-* [arm-sel4-fel4](arm-sel4-fel4.json)
+* [armv7-sel4-fel4](armv7-sel4-fel4.json)
 * [x86_64-sel4-fel4](x86_64-sel4-fel4.json)
 
 ## Using custom target specifications

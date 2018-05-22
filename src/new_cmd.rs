@@ -71,8 +71,8 @@ fn generate_target_specs(subcmd: &NewCmd) -> Result<(), Error> {
         File::create(&target_specs_path.join("x86_64-sel4-fel4.json"))?;
     target_spec_x86_64_file.write_all(FEL4_TARGET_SPEC_X86_64_SEL4_FEL4.as_bytes())?;
 
-    let mut target_spec_arm_file = File::create(&target_specs_path.join("arm-sel4-fel4.json"))?;
-    target_spec_arm_file.write_all(FEL4_TARGET_SPEC_ARM_SEL4_FEL4.as_bytes())?;
+    let mut target_spec_armv7_file = File::create(&target_specs_path.join("armv7-sel4-fel4.json"))?;
+    target_spec_armv7_file.write_all(FEL4_TARGET_SPEC_ARMV7_SEL4_FEL4.as_bytes())?;
 
     Ok(())
 }
@@ -100,8 +100,8 @@ const FEL4_TARGET_SPEC_README: &'static str = include_str!("../target_specs/READ
 const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
     include_str!("../target_specs/x86_64-sel4-fel4.json");
 
-const FEL4_TARGET_SPEC_ARM_SEL4_FEL4: &'static str =
-    include_str!("../target_specs/arm-sel4-fel4.json");
+const FEL4_TARGET_SPEC_ARMV7_SEL4_FEL4: &'static str =
+    include_str!("../target_specs/armv7-sel4-fel4.json");
 
 const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
 

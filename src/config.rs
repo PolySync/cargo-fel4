@@ -171,7 +171,7 @@ pub struct Config {
 pub enum Arch {
     X86,
     X86_64,
-    Arm,
+    Armv7,
 }
 
 impl Arch {
@@ -179,8 +179,8 @@ impl Arch {
         if target.contains("x86_64") {
             return Ok(Arch::X86_64);
         }
-        if target.contains("arm") {
-            return Ok(Arch::Arm);
+        if target.contains("armv7") {
+            return Ok(Arch::Armv7);
         }
         if target.contains("i686") {
             return Ok(Arch::X86);

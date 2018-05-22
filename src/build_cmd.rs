@@ -113,7 +113,7 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     // with an extra environment variable which gives
     // elfloader-tool a path to the root-task binary
     match &config.fel4_config.target {
-        &SupportedTarget::ArmSel4Fel4 => {
+        &SupportedTarget::Armv7Sel4Fel4 => {
             construct_libsel4_build_command(subcmd, &config, &cross_layer_locations)
                 .env(
                     "FEL4_ROOT_TASK_IMAGE_PATH",
@@ -307,8 +307,8 @@ impl BuildCommandExt for Command {
         // `xargo/issues/216`
         // `cargo-fel4/issues/18`
         match target {
-            &SupportedTarget::ArmSel4Fel4 => {
-                self.env("CC_arm-sel4-fel4", "arm-linux-gnueabihf-gcc")
+            &SupportedTarget::Armv7Sel4Fel4 => {
+                self.env("CC_armv7-sel4-fel4", "arm-linux-gnueabihf-gcc")
             }
             _ => self,
         }
