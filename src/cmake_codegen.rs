@@ -28,11 +28,14 @@ pub fn filter_to_interesting_flags<I>(i: I) -> Vec<RawFlag>
 where
     I: IntoIterator<Item = RawFlag>,
 {
-    i.into_iter()
+    let mut v: Vec<RawFlag> = i.into_iter()
         .filter(|f| f.cmake_type == CMakeType::String || f.cmake_type == CMakeType::Bool)
         .filter(|f| !f.key.starts_with("CMAKE_"))
-        .collect()
+        .collect();
+    v.sort();
+    v
 }
+
 pub fn cache_to_interesting_flags<P: AsRef<Path>>(
     cmake_cache_path: P,
 ) -> Result<Vec<RawFlag>, CMakeCodegenError> {

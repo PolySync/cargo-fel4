@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::env::{self, current_dir};
 use std::ffi::OsStr;
 use std::fs::{self, canonicalize, File};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::{gather_config, run_cmd, Error};
@@ -85,12 +85,16 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     // Generate the source code entry point (root task) for the application
     // that will wrap the end-user's code as executing within a sub-thread
     let root_task_path = config.root_dir.join("src").join("bin");
-    fs::create_dir_all(&root_task_path)?;
-    let mut root_file = File::create(root_task_path.join("root-task.rs").as_path())?;
-    Generator::new(&mut root_file, &config, &fel4_flags).generate()?;
+    fs::create_dir_all(&root_task_path).map_err(|e| Error::IO(format!("Difficulty creating directory, {:?} : {}", &root_task_path, e)))?;
+    let mut root_file = File::create(root_task_path.join("root-task.rs").as_path())
+        .map_err(|e| Error::IO(format!("Could not create root-task file. {}", e)))?;
+    Generator::new(&mut root_file, &config.pkg_module_name, &config.arch, &fel4_flags).generate()?;
 
-    if canonicalize(&config.root_dir)? != canonicalize(current_dir()?)? {
-        return Err(Error::ExitStatusError("The build command does not work with a cargo manifest directory that differs from the current working directory due to limitations of Xargo".to_string()));
+
+    match is_current_dir_root_dir(&config.root_dir) {
+        Ok(are_same) if !are_same => return Err(Error::ExitStatusError("The build command does not work with a cargo manifest directory that differs from the current working directory due to limitations of Xargo".to_string())),
+        Err(e) => return Err(Error::IO(format!("Error with current dir comparison: {}", e))),
+        _ => ()
     }
     // Build the generated root task binary
     run_cmd(
@@ -184,6 +188,11 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     Ok(())
 }
 
+fn is_current_dir_root_dir<P: AsRef<Path>>(root_dir: P) -> Result<bool, ::std::io::Error> {
+    let root_dir_buf: PathBuf = root_dir.as_ref().into();
+    Ok(canonicalize(root_dir_buf)? == canonicalize(current_dir()?)?)
+}
+
 fn construct_libsel4_build_command<P>(
     subcmd: &BuildCmd,
     config: &Config,
@@ -237,7 +246,7 @@ where
         .add_loudness_args(&subcmd)
         .handle_arm_edge_case(&config.fel4_config.target)
         .arg_if(|| subcmd.tests, "--features")
-        .arg_if(|| subcmd.tests, "test")
+        .arg_if(|| subcmd.tests, "test alloc")
         .arg("--target")
         .arg(&config.fel4_config.target.full_name())
         .add_locations_as_env_vars(cross_layer_locations);
