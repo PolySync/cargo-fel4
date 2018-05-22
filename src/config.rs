@@ -1,7 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use cargo_metadata;
-use fel4_config::{get_fel4_config, BuildProfile as ConfigBuildProfile, Fel4Config};
+use fel4_config::{
+    get_fel4_config, get_full_manifest, BuildProfile as ConfigBuildProfile, Fel4Config,
+    FullFel4Manifest,
+};
+use structopt::StructOpt;
 
 use super::Error;
 
@@ -25,13 +29,18 @@ pub enum Fel4SubCmd {
     #[structopt(name = "clean", about = "Remove generated artifacts")]
     CleanCmd(CleanCmd),
 }
-
 #[derive(Debug, Clone, StructOpt)]
-pub struct BuildCmd {
+pub struct LoudnessOpts {
     #[structopt(name = "verbose", long = "verbose", short = "v", help = "Use verbose output")]
     pub verbose: bool,
     #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
     pub quiet: bool,
+}
+
+#[derive(Debug, Clone, StructOpt)]
+pub struct BuildCmd {
+    #[structopt(flatten)]
+    pub loudness: LoudnessOpts,
     #[structopt(name = "release", long = "release", help = "Build artifacts in release mode")]
     pub release: bool,
     #[structopt(name = "tests", long = "tests", help = "Build with feL4 test features enabled")]
@@ -48,10 +57,8 @@ pub struct BuildCmd {
 
 #[derive(Debug, Clone, StructOpt)]
 pub struct SimulateCmd {
-    #[structopt(name = "verbose", long = "verbose", short = "v", help = "Use verbose output")]
-    pub verbose: bool,
-    #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
-    pub quiet: bool,
+    #[structopt(flatten)]
+    pub loudness: LoudnessOpts,
     #[structopt(name = "release", long = "release", help = "Simulate release artifacts")]
     pub release: bool,
     #[structopt(name = "tests", long = "tests", help = "Simulate test artifacts")]
@@ -68,10 +75,8 @@ pub struct SimulateCmd {
 
 #[derive(Debug, Clone, StructOpt)]
 pub struct NewCmd {
-    #[structopt(name = "verbose", long = "verbose", short = "v", help = "Use verbose output")]
-    pub verbose: bool,
-    #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
-    pub quiet: bool,
+    #[structopt(flatten)]
+    pub loudness: LoudnessOpts,
     #[structopt(
         name = "name",
         long = "name",
@@ -84,10 +89,8 @@ pub struct NewCmd {
 
 #[derive(Debug, Clone, StructOpt)]
 pub struct TestCmd {
-    #[structopt(name = "verbose", long = "verbose", short = "v", help = "Use verbose output")]
-    pub verbose: bool,
-    #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
-    pub quiet: bool,
+    #[structopt(flatten)]
+    pub loudness: LoudnessOpts,
     #[structopt(name = "release", long = "release", help = "Build artifacts in release mode")]
     pub release: bool,
     #[structopt(subcommand)]
@@ -112,10 +115,16 @@ pub enum TestSubCmd {
 
 #[derive(Debug, Clone, StructOpt)]
 pub struct CleanCmd {
-    #[structopt(name = "verbose", long = "verbose", short = "v", help = "Use verbose output")]
-    pub verbose: bool,
-    #[structopt(name = "quiet", long = "quiet", short = "q", help = "No output printed to stdout")]
-    pub quiet: bool,
+    #[structopt(flatten)]
+    pub loudness: LoudnessOpts,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
 }
 
 impl Fel4SubCmd {
@@ -214,6 +223,22 @@ impl Fel4BuildProfile {
             Fel4BuildProfile::TestRelease => ConfigBuildProfile::Release,
         }
     }
+}
+
+pub fn get_fel4_manifest<P: AsRef<Path>>(
+    cargo_manifest_file_path: P,
+) -> Result<FullFel4Manifest, Error> {
+    get_full_manifest(fel4_manifest_path_from_cargo_manifest_path(
+        cargo_manifest_file_path,
+    )).map_err(|ce| Error::ConfigError(format!("{}", ce)))
+}
+
+fn fel4_manifest_path_from_cargo_manifest_path<P: AsRef<Path>>(
+    cargo_manifest_file_path: P,
+) -> PathBuf {
+    let mut p = cargo_manifest_file_path.as_ref().to_path_buf();
+    p.pop();
+    p.join("fel4.toml")
 }
 
 pub fn gather(cmd: &Fel4SubCmd) -> Result<Config, Error> {

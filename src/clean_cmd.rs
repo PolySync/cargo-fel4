@@ -1,30 +1,26 @@
-use log;
-use log::LevelFilter;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use super::{gather_config, run_cmd, Error};
-use config::{CleanCmd, Config, Fel4SubCmd};
+use super::Error;
+use command_ext::CommandExt;
+use config::{get_fel4_manifest, CleanCmd};
 
 pub fn handle_clean_cmd(clean_cmd: &CleanCmd) -> Result<(), Error> {
-    if clean_cmd.verbose {
-        log::set_max_level(LevelFilter::Info);
-    } else {
-        log::set_max_level(LevelFilter::Error);
-    }
+    let cargo_manifest_path = &clean_cmd.cargo_manifest_path;
+    let root_dir = {
+        let mut p = cargo_manifest_path.clone();
+        p.pop();
+        p
+    };
 
-    let config: Config = gather_config(&Fel4SubCmd::CleanCmd(clean_cmd.clone()))?;
-
-    let artifact_path = Path::new(&config.root_dir).join(config.fel4_config.artifact_path);
+    let fel4_manifest = get_fel4_manifest(cargo_manifest_path)?;
+    let artifact_path = Path::new(&root_dir).join(fel4_manifest.artifact_path);
 
     clean_cargo_build_cache(clean_cmd)?;
 
     if artifact_path.exists() {
-        if clean_cmd.verbose {
-            info!("Removing {}", artifact_path.display());
-        }
-
+        info!("Removing {}", artifact_path.display());
         fs::remove_dir_all(&artifact_path)?;
     }
 
@@ -33,16 +29,9 @@ pub fn handle_clean_cmd(clean_cmd: &CleanCmd) -> Result<(), Error> {
 
 fn clean_cargo_build_cache(clean_cmd: &CleanCmd) -> Result<(), Error> {
     let mut cmd = Command::new("cargo");
-
-    if clean_cmd.verbose {
-        cmd.arg("--verbose");
-    } else if clean_cmd.quiet {
-        cmd.arg("--quiet");
-    }
-
-    cmd.arg("clean");
-
-    run_cmd(&mut cmd)?;
+    cmd.add_loudness_args(&clean_cmd.loudness)
+        .arg("clean")
+        .run_cmd()?;
 
     Ok(())
 }

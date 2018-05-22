@@ -10,11 +10,11 @@ extern crate structopt;
 use colored::Colorize;
 use std::fmt;
 use std::io;
-use std::process::Command;
 
 mod build_cmd;
 mod clean_cmd;
 mod cmake_codegen;
+mod command_ext;
 mod config;
 mod generator;
 mod new_cmd;
@@ -24,8 +24,8 @@ mod test_cmd;
 pub use build_cmd::handle_build_cmd;
 pub use clean_cmd::handle_clean_cmd;
 pub use config::{
-    gather as gather_config, BuildCmd, CargoFel4Cli, Config, Fel4SubCmd, NewCmd, SimulateCmd,
-    TestCmd, TestSubCmd,
+    gather as gather_config, BuildCmd, CargoFel4Cli, CleanCmd, Config, Fel4SubCmd, LoudnessOpts,
+    NewCmd, SimulateCmd, TestCmd, TestSubCmd,
 };
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;
@@ -89,26 +89,4 @@ impl log::Log for Logger {
     }
 
     fn flush(&self) {}
-}
-
-pub fn run_cmd(cmd: &mut Command) -> Result<(), Error> {
-    info!("running: {:?}", cmd);
-    let status = match cmd.status() {
-        Ok(status) => status,
-        Err(e) => {
-            return Err(Error::ExitStatusError(format!(
-                "failed to execute the command: {}",
-                e
-            )));
-        }
-    };
-
-    if !status.success() {
-        return Err(Error::ExitStatusError(format!(
-            "command status returned: {}",
-            status
-        )));
-    }
-
-    Ok(())
 }
