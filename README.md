@@ -4,11 +4,35 @@
 A cargo subcommand for automating fel4 (seL4 for Rust) development
 ```
 
+## Overview
+
+`cargo-fel4` seeks to accelerate the pace of Rust development for seL4 environments
+by automating away the annoyances of building the underlying seL4 codebase,
+generating useable Rust bindings, and providing a way to get your code
+into a runnable seL4 application.
+
+Once installed, use `cargo fel4 new my-project` to create a new fel4 project, which is a regular
+Rust `no_std` library project with a few additional configuration frills.
+
+In that project, running `cargo fel4 build` will generate a seL4 application
+wrapping your library code from `src/lib.rs`, and `cargo fel4 simulate` will run it.
+
+Access to seL4 capabilities is presently through the [libsel4-sys library](https://github.com/PolySync/libsel4-sys),
+a thin binding layer around seL4. This wrapper is built and configured according to your
+fel4 project settings, stored in your project's `fel4.toml` manifest file.
+
+fel4 projects come with a example [property-based](https://github.com/AltSysrq/proptest) test suite to demonstrate how to conduct
+tests in the fel4 context. Try it out with `cargo fel4 test build && cargo fel4 test simulate`
+
+
 ## Dependencies
+
+`cargo-fel4` works on top of several other tools to operate, so you'll need Rust with Cargo, Xargo,
+CMake, Ninja, and QEMU to build and run fel4 projects.
 
 ### Linux
 
-We use Ubuntu Xenial but other versions should work.
+cargo-fel4 was developed using Ubuntu Xenial, but other Linux versions should work.
 
 ### QEMU
 
