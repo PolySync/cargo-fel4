@@ -4,23 +4,16 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::process::Command;
 
-use super::{run_cmd, Error};
+use super::Error;
+use command_ext::CommandExt;
 use config::NewCmd;
 use fel4_config::get_exemplar_default_toml;
-use log;
-use log::LevelFilter;
 
 /// Create a new feL4 project.
 ///
 /// Generates all of the scaffolding files for a new
 /// feL4 project.
 pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
-    if subcmd.verbose {
-        log::set_max_level(LevelFilter::Info);
-    } else {
-        log::set_max_level(LevelFilter::Error);
-    }
-
     generate_baseline_cargo_package(subcmd)?;
 
     generate_fel4_project_files(subcmd)?;
@@ -34,22 +27,13 @@ pub fn handle_new_cmd(subcmd: &NewCmd) -> Result<(), Error> {
 
 fn generate_baseline_cargo_package(subcmd: &NewCmd) -> Result<(), Error> {
     let mut cmd = Command::new("cargo");
-    cmd.arg("new");
-
-    // We passthrough these to cargo
-    if subcmd.verbose {
-        cmd.arg("--verbose");
-    } else if subcmd.quiet {
-        cmd.arg("--quiet");
-    }
+    cmd.arg("new").add_loudness_args(&subcmd.loudness);
 
     if let Some(ref n) = subcmd.name {
         cmd.arg("--name").arg(&n);
     }
 
-    run_cmd(cmd.arg("--lib").arg(&subcmd.path))?;
-
-    Ok(())
+    cmd.arg("--lib").arg(&subcmd.path).run_cmd()
 }
 
 fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
@@ -103,7 +87,8 @@ pub fn generate_tests_source_files(base_dir: Option<&Path>) -> Result<(), Error>
     if !src_path.exists() {
         let mut test_src_file = File::create(&src_path)
             .map_err(|e| Error::IO(format!("Could not create fel4_test.rs {}", e)))?;
-        test_src_file.write_all(TEST_LIB_CODE.as_bytes())
+        test_src_file
+            .write_all(TEST_LIB_CODE.as_bytes())
             .map_err(|e| Error::IO(format!("Could not write to fel4_test.rs {}", e)))?;
     }
 

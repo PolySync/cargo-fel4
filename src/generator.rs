@@ -17,7 +17,12 @@ pub struct Generator<'a, 'b, 'c, W: Write + 'a> {
 }
 
 impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
-    pub fn new(writer: &'a mut W, package_module_name: &'b str, arch: &'b Arch, flags: &'c [SimpleFlag]) -> Self
+    pub fn new(
+        writer: &'a mut W,
+        package_module_name: &'b str,
+        arch: &'b Arch,
+        flags: &'c [SimpleFlag],
+    ) -> Self
     where
         W: Write,
     {

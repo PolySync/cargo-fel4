@@ -1,29 +1,21 @@
 extern crate cargo_metadata;
 
 use cmake_config::{Key, SimpleFlag};
+use command_ext::CommandExt;
 use fel4_config::{FlatTomlValue, SupportedTarget};
-use log;
-use log::LevelFilter;
 use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::env::{self, current_dir};
-use std::ffi::OsStr;
 use std::fs::{self, canonicalize, File};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::{gather_config, run_cmd, Error};
+use super::{gather_config, Error};
 use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
 use config::{BuildCmd, Config, Fel4SubCmd};
 use generator::Generator;
 
 pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
-    if subcmd.verbose {
-        log::set_max_level(LevelFilter::Info);
-    } else {
-        log::set_max_level(LevelFilter::Error);
-    }
-
     let config: Config = gather_config(&Fel4SubCmd::BuildCmd(subcmd.clone()))?;
 
     let build_profile = if let Some(p) = config.build_profile {
@@ -85,11 +77,20 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     // Generate the source code entry point (root task) for the application
     // that will wrap the end-user's code as executing within a sub-thread
     let root_task_path = config.root_dir.join("src").join("bin");
-    fs::create_dir_all(&root_task_path).map_err(|e| Error::IO(format!("Difficulty creating directory, {:?} : {}", &root_task_path, e)))?;
+    fs::create_dir_all(&root_task_path).map_err(|e| {
+        Error::IO(format!(
+            "Difficulty creating directory, {:?} : {}",
+            &root_task_path, e
+        ))
+    })?;
     let mut root_file = File::create(root_task_path.join("root-task.rs").as_path())
         .map_err(|e| Error::IO(format!("Could not create root-task file. {}", e)))?;
-    Generator::new(&mut root_file, &config.pkg_module_name, &config.arch, &fel4_flags).generate()?;
-
+    Generator::new(
+        &mut root_file,
+        &config.pkg_module_name,
+        &config.arch,
+        &fel4_flags,
+    ).generate()?;
 
     match is_current_dir_root_dir(&config.root_dir) {
         Ok(are_same) if !are_same => return Err(Error::ExitStatusError("The build command does not work with a cargo manifest directory that differs from the current working directory due to limitations of Xargo".to_string())),
@@ -97,10 +98,9 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
         _ => ()
     }
     // Build the generated root task binary
-    run_cmd(
-        &mut construct_root_task_build_command(subcmd, &config, &cross_layer_locations)
-            .env("RUSTFLAGS", &rustflags_env_var),
-    )?;
+    construct_root_task_build_command(subcmd, &config, &cross_layer_locations)
+        .env("RUSTFLAGS", &rustflags_env_var)
+        .run_cmd()?;
 
     let sysimg_path = artifact_path.join("feL4img");
     let kernel_path = artifact_path.join("kernel");
@@ -114,14 +114,13 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     // elfloader-tool a path to the root-task binary
     match &config.fel4_config.target {
         &SupportedTarget::ArmSel4Fel4 => {
-            run_cmd(
-                construct_libsel4_build_command(subcmd, &config, &cross_layer_locations)
-                    .env(
-                        "FEL4_ROOT_TASK_IMAGE_PATH",
-                        target_build_cache_path.join("root-task"),
-                    )
-                    .env("RUSTFLAGS", &rustflags_env_var),
-            )?;
+            construct_libsel4_build_command(subcmd, &config, &cross_layer_locations)
+                .env(
+                    "FEL4_ROOT_TASK_IMAGE_PATH",
+                    target_build_cache_path.join("root-task"),
+                )
+                .env("RUSTFLAGS", &rustflags_env_var)
+                .run_cmd()?;
 
             // seL4 CMake rules will just output everything to `kernel`
             // we copy it so it's consistent with our image name but
@@ -208,7 +207,7 @@ where
         .arg("--manifest-path")
         .arg(&subcmd.cargo_manifest_path)
         .arg_if(|| subcmd.release, "--release")
-        .add_loudness_args(&subcmd)
+        .add_loudness_args(&subcmd.loudness)
         .handle_arm_edge_case(&config.fel4_config.target)
         .add_locations_as_env_vars(locations)
         .arg("--target")
@@ -243,7 +242,7 @@ where
         .arg("--manifest-path")
         .arg(&subcmd.cargo_manifest_path)
         .arg_if(|| subcmd.release, "--release")
-        .add_loudness_args(&subcmd)
+        .add_loudness_args(&subcmd.loudness)
         .handle_arm_edge_case(&config.fel4_config.target)
         .arg_if(|| subcmd.tests, "--features")
         .arg_if(|| subcmd.tests, "test alloc")
@@ -265,15 +264,10 @@ pub struct CrossLayerLocations<P: Borrow<Path>> {
 
 /// Extension methods for `Command` instances to supply common parameters or
 /// metadata
-trait CommandExt
+trait BuildCommandExt
 where
     Self: Into<Command>,
 {
-    /// Add an argument if a predicate returns true, largely for easier chaining
-    fn arg_if<'c, P, S: AsRef<OsStr>>(&'c mut self, predicate: P, arg: S) -> &'c mut Self
-    where
-        P: FnOnce() -> bool;
-
     /// Populate the command with the environment variables tracked by
     /// CrossLayerLocations
     fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
@@ -281,24 +275,11 @@ where
         cross_layer_locations: &'l CrossLayerLocations<P>,
     ) -> &'c mut Self;
 
-    /// Configures the presence of `--verbose` and `--quiet` flags
-    fn add_loudness_args<'c, 'f>(&'c mut self, args: &'f BuildCmd) -> &'c mut Self;
-
     /// Handle a possible edge case in cross-compiling for arm
     fn handle_arm_edge_case<'c, 'f>(&'c mut self, config: &'f SupportedTarget) -> &'c mut Self;
 }
 
-impl CommandExt for Command {
-    fn arg_if<'c, P, S: AsRef<OsStr>>(&'c mut self, predicate: P, arg: S) -> &'c mut Self
-    where
-        P: FnOnce() -> bool,
-    {
-        if predicate() {
-            self.arg(arg);
-        }
-        self
-    }
-
+impl BuildCommandExt for Command {
     fn add_locations_as_env_vars<'c, 'l, P: Borrow<Path>>(
         &'c mut self,
         locations: &'l CrossLayerLocations<P>,
@@ -307,11 +288,6 @@ impl CommandExt for Command {
             .env("FEL4_ARTIFACT_PATH", locations.fel4_artifact_path.borrow())
             .env("RUST_TARGET_PATH", locations.rust_target_path.borrow());
         self
-    }
-
-    fn add_loudness_args<'c, 'f>(&'c mut self, args: &BuildCmd) -> &mut Self {
-        self.arg_if(|| args.quiet, "--quiet")
-            .arg_if(|| args.verbose, "--verbose")
     }
 
     fn handle_arm_edge_case<'c, 'f>(&'c mut self, target: &SupportedTarget) -> &mut Self {

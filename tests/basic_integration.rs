@@ -23,9 +23,11 @@ macro_rules! sequential_test {
         #[test]
         fn $name() {
             let _guard = $crate::SEQUENTIAL_TEST_MUTEX.lock();
-            { $body }
+            {
+                $body
+            }
         }
-    }
+    };
 }
 
 fn enable_detailed_logging() {
@@ -50,8 +52,10 @@ fn cargo_fel4_new_runs_in_temp_dir_with_success() {
 
 fn run_fel4_new(target_dir: &PathBuf) {
     let _ = cargo_fel4::handle_new_cmd(&cargo_fel4::NewCmd {
-        verbose: true,
-        quiet: false,
+        loudness: cargo_fel4::LoudnessOpts {
+            verbose: true,
+            quiet: false,
+        },
         name: Some("foo".to_string()),
         path: target_dir.clone(),
     }).expect("could not run fel4 new command");
@@ -67,33 +71,69 @@ sequential_test! {
         let old_dir = current_dir().expect("Could get current dir");
         set_current_dir(&target_dir).expect("Could not change current dir to target test repo dir");
         let r = cargo_fel4::handle_build_cmd(&cargo_fel4::BuildCmd {
-            verbose: true,
-            quiet: false,
+            loudness: cargo_fel4::LoudnessOpts {
+                verbose: true,
+                quiet: false,
+            },
             release: false,
             tests: false,
-            cargo_manifest_path: target_cargo_manifest,
+            cargo_manifest_path: target_cargo_manifest.clone(),
         });
-        set_current_dir(old_dir).expect("Could not change the current dir back to its original state");
         r.expect("could not run fel4 build command");
         assert!(&target_dir.join("src/bin/root-task.rs").is_file());
         assert!(&target_dir.join("artifacts/debug/simulate").is_file());
         assert!(&target_dir.join("artifacts/debug/kernel").is_file());
         assert!(&target_dir.join("artifacts/debug/feL4img").is_file());
+
+        let _t = cargo_fel4::handle_test_cmd(&cargo_fel4::TestCmd {
+            loudness: cargo_fel4::LoudnessOpts {
+                verbose: true,
+                quiet: false,
+            },
+            release: false,
+            subcmd: cargo_fel4::TestSubCmd::Build,
+            cargo_manifest_path: target_cargo_manifest.clone(),
+        }).expect("Could not run handle_test_command");
+        assert!(&target_dir.join("artifacts/test/debug/simulate").is_file());
+        assert!(&target_dir.join("artifacts/test/debug/kernel").is_file());
+        assert!(&target_dir.join("artifacts/test/debug/feL4img").is_file());
+
+        cargo_fel4::handle_clean_cmd(&cargo_fel4::CleanCmd {
+            loudness: cargo_fel4::LoudnessOpts {
+                verbose: true,
+                quiet: false,
+            },
+            cargo_manifest_path: target_cargo_manifest.clone(),
+        }).expect("Could not run clean command");
+        assert!(!&target_dir.join("artifacts/debug/simulate").is_file());
+        assert!(!&target_dir.join("artifacts/debug/kernel").is_file());
+        assert!(!&target_dir.join("artifacts/debug/feL4img").is_file());
+        assert!(!&target_dir.join("artifacts/test/debug/simulate").is_file());
+        assert!(!&target_dir.join("artifacts/test/debug/kernel").is_file());
+        assert!(!&target_dir.join("artifacts/test/debug/feL4img").is_file());
+
+        set_current_dir(old_dir).expect("Could not change the current dir back to its original state");
     }
 }
 
 fn replace_target_with_arm(fel4_manifest_path: &Path) {
-        // Replace the default x86_64 target and pc99 platform with arm and sabre, respectively
-        let original = {
-            let mut file = File::open(&fel4_manifest_path).expect("Could not open fel4.toml");
-            let mut contents = String::new();
-            file.read_to_string(&mut contents).expect("Could not read fel4.toml");
-            contents
-        };
-        let contents = original.replace("target = \"x86_64-sel4-fel4\"", "target = \"arm-sel4-fel4\"");
-        let contents = contents.replace("platform = \"pc99\"", "platform = \"sabre\"");
-        let mut file = File::create(&fel4_manifest_path).expect("Could not recreate fel4 manifest");
-        file.write(&contents.as_bytes()).expect("Could not write new content");
+    // Replace the default x86_64 target and pc99 platform with arm and sabre,
+    // respectively
+    let original = {
+        let mut file = File::open(&fel4_manifest_path).expect("Could not open fel4.toml");
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)
+            .expect("Could not read fel4.toml");
+        contents
+    };
+    let contents = original.replace(
+        "target = \"x86_64-sel4-fel4\"",
+        "target = \"arm-sel4-fel4\"",
+    );
+    let contents = contents.replace("platform = \"pc99\"", "platform = \"sabre\"");
+    let mut file = File::create(&fel4_manifest_path).expect("Could not recreate fel4 manifest");
+    file.write(&contents.as_bytes())
+        .expect("Could not write new content");
 }
 
 sequential_test! {
@@ -112,8 +152,10 @@ sequential_test! {
 
 
         let r = cargo_fel4::handle_build_cmd(&cargo_fel4::BuildCmd {
-            verbose: true,
-            quiet: false,
+            loudness: cargo_fel4::LoudnessOpts {
+                verbose: true,
+                quiet: false,
+            },
             release: false,
             tests: false,
             cargo_manifest_path: target_cargo_manifest.clone(),
@@ -125,12 +167,31 @@ sequential_test! {
         assert!(&target_dir.join("artifacts/debug/feL4img").is_file());
 
         let _t = cargo_fel4::handle_test_cmd(&cargo_fel4::TestCmd {
-            verbose: true,
-            quiet: false,
+            loudness: cargo_fel4::LoudnessOpts {
+                verbose: true,
+                quiet: false,
+            },
             release: false,
             subcmd: cargo_fel4::TestSubCmd::Build,
             cargo_manifest_path: target_cargo_manifest.clone(),
         }).expect("Could not run handle_test_command");
+        assert!(&target_dir.join("artifacts/test/debug/simulate").is_file());
+        assert!(&target_dir.join("artifacts/test/debug/kernel").is_file());
+        assert!(&target_dir.join("artifacts/test/debug/feL4img").is_file());
+
+        cargo_fel4::handle_clean_cmd(&cargo_fel4::CleanCmd {
+            loudness: cargo_fel4::LoudnessOpts {
+                verbose: true,
+                quiet: false,
+            },
+            cargo_manifest_path: target_cargo_manifest.clone(),
+        }).expect("Could not run clean command");
+        assert!(!&target_dir.join("artifacts/debug/simulate").is_file());
+        assert!(!&target_dir.join("artifacts/debug/kernel").is_file());
+        assert!(!&target_dir.join("artifacts/debug/feL4img").is_file());
+        assert!(!&target_dir.join("artifacts/test/debug/simulate").is_file());
+        assert!(!&target_dir.join("artifacts/test/debug/kernel").is_file());
+        assert!(!&target_dir.join("artifacts/test/debug/feL4img").is_file());
 
         set_current_dir(old_dir).expect("Could not change the current dir back to its original state");
 

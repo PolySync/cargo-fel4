@@ -60,9 +60,9 @@ fn test_message_info_predictability(
         &(0u32..0xfffff, 0u32..0x7, 0u32..0x3, 0u32..0x7f),
         |&input| {
             let (label, caps, extra, length) = input;
+            let (label, caps, extra, length) = (label as seL4_Word, caps as seL4_Word, extra as seL4_Word, length as seL4_Word);
             let out = unsafe {
                 let msg = seL4_MessageInfo_new(label, caps, extra, length);
-                let (label, caps, extra, length) = (label as seL4_Word, caps as seL4_Word, extra as seL4_Word, length as seL4_Word);
                 let ptr = &msg as *const seL4_MessageInfo_t as *mut seL4_MessageInfo_t;
                 (
                     seL4_MessageInfo_ptr_get_label(ptr),
@@ -90,9 +90,9 @@ fn test_cap_rights_predictability(
 ) -> Result<(), TestError<(u32, u32, u32)>> {
     runner.run(&(0u32..2, 0u32..2, 0u32..2), |&input| {
         let (grant, read, write) = input;
+        let (grant, read, write) = (grant as seL4_Word, read as seL4_Word, write as seL4_Word);
         let out = unsafe {
             let msg = seL4_CapRights_new(grant, read, write);
-            let (grant, read, write) = (grant as seL4_Word, read as seL4_Word, write as seL4_Word);
             let ptr = &msg as *const seL4_CapRights_t as *mut seL4_CapRights_t;
             (
                 seL4_CapRights_ptr_get_capAllowRead(ptr),
