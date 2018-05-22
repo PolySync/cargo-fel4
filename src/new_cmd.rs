@@ -58,7 +58,7 @@ fn generate_fel4_project_files(subcmd: &NewCmd) -> Result<(), Error> {
 
     // Create rust-toolchain file pinned to nightly
     let mut toolchain_file = File::create(Path::new(&subcmd.path).join("rust-toolchain"))?;
-    toolchain_file.write_all(b"nightly")?;
+    toolchain_file.write_all(b"nightly\n")?;
 
     Ok(())
 }
