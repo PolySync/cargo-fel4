@@ -11,6 +11,8 @@ by automating away the annoyances of building the underlying seL4 codebase,
 generating useable Rust bindings, and providing a way to get your code
 into a runnable seL4 application.
 
+## Getting Started
+
 Once installed, use `cargo fel4 new my-project` to create a new fel4 project, which is a regular
 Rust `no_std` library project with a few additional configuration frills.
 
@@ -24,17 +26,16 @@ fel4 project settings, stored in your project's `fel4.toml` manifest file.
 fel4 projects come with a example [property-based](https://github.com/AltSysrq/proptest) test suite to demonstrate how to conduct
 tests in the fel4 context. Try it out with `cargo fel4 test build && cargo fel4 test simulate`
 
-
-## Dependencies
+### Dependencies
 
 `cargo-fel4` works on top of several other tools to operate, so you'll need Rust with Cargo, Xargo,
 CMake, Ninja, and QEMU to build and run fel4 projects.
 
-### Linux
+#### Linux
 
 cargo-fel4 was developed using Ubuntu Xenial, but other Linux versions should work.
 
-### QEMU
+#### QEMU
 
 ```
 $ sudo apt-get install qemu-system-x86
@@ -42,25 +43,25 @@ $ sudo apt-get install qemu-system-x86
 $ sudo apt-get install qemu-system-arm
 ```
 
-### CMake
+#### CMake
 
 CMake version `3.7.2` or greater is required.
 
 Binary releases are available from [cmake.org](https://cmake.org/download/).
 
-### Ninja
+#### Ninja
 
 Ninja version `1.7.1` or greater is required.
 
 Binary releases are available from [github](https://github.com/ninja-build/ninja/releases).
 
-### Cross compiler toolchains
+#### Cross compiler toolchains
 
 ```
 $ sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
 ```
 
-### rustup
+#### rustup
 
 ```
 # Download the install script
@@ -70,13 +71,13 @@ $ curl -f -L https://static.rust-lang.org/rustup.sh -O
 $ sh rustup.sh
 ```
 
-### Nightly Rust
+#### Nightly Rust
 
 ```
-$ rustup default nightly
+$ rustup install nightly
 ```
 
-### Xargo
+#### Xargo
 
 ```
 # Xargo requires rust-src component
@@ -86,13 +87,17 @@ $ rustup component add rust-src
 $ cargo install xargo
 ```
 
-## Install
+## Building
 
-cargo-fel4 can be installed with `cargo install`:
+cargo-fel4 can be built and installed with `cargo install`:
 
 ```
 $ cargo install --git https://github.com/PolySync/cargo-fel4.git
 ```
+
+If you intend on developing `cargo-fel4`, a build is as simple
+as running `cargo build` after getting the repo and installing
+dependencies.
 
 ## Usage
 
@@ -119,7 +124,9 @@ SUBCOMMANDS:
     test        Build and run feL4 tests
 ```
 
-### Create a New feL4 Project
+### Examples
+
+#### Create a New feL4 Project
 
 To create a new project using cargo-fel4:
 
@@ -141,7 +148,7 @@ my-project/
 └── Xargo.toml
 ```
 
-### Build a feL4 Project
+#### Build a feL4 Project
 
 To build a cargo-fel4 project:
 
@@ -161,7 +168,7 @@ $ cd my-project/
 $ cargo fel4 simulate
 ```
 
-### Running Tests
+#### Running Tests
 
 cargo-fel4 will generate a basic set of property tests when creating a new project.
 
@@ -177,12 +184,16 @@ Simulate a cargo-fel4 test application:
 $ cargo fel4 test simulate
 ```
 
-## Configuration
+#### Configuration
 
 cargo-fel4 is configured through a `fel4.toml` manifest file.
 
 The manifest file is responsible for prescribing a high-level configuration for cargo-fel4
 infrastructure, as well as the underlying `libsel4-sys` package CMake build system.
+
+Boolean properties specified in the `fel4.toml` are applied as Rust features
+to fel4 projects during `cargo fel4 build`, so it's possible to
+do compile-time configuration to account for variations in available seL4 options.
 
 The `fel4.toml` manifest resides in the project's root directory, and contains several properties
 related to the location of input/output artifacts.
@@ -222,7 +233,18 @@ See the [fel4-config](https://github.com/PolySync/fel4-config) and
 See the target specifications [README](target_specs/README.md) for more information about
 the specifications shipped with cargo-fel4.
 
-## License
+## Tests
+
+### Test Dependencies
+
+The tests for `cargo-fel4` (as opposed to the tests within a given fel4 project)
+requires installing the standard dependencies listed earlier.
+
+
+### Running Tests
+`cargo-fel4`'s internal tests can be exercised by running `cargo test`
+
+# License
 
 cargo-fel4 is released under the MIT license, with additional thanks and attribution to the following:
 
