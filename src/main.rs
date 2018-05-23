@@ -14,13 +14,7 @@ fn main() {
         error!("there was an error initializing the logger:\n{}", e);
         return;
     };
-
-    // subcommands can adjust as needed
-    log::set_max_level(LevelFilter::Error);
-
-    let subcmd = match CargoFel4Cli::from_args() {
-        CargoFel4Cli::Fel4SubCmd(c) => c,
-    };
+    let CargoFel4Cli::Fel4SubCmd(subcmd) = CargoFel4Cli::from_args();
 
     match subcmd {
         Fel4SubCmd::BuildCmd(c) => {

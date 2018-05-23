@@ -9,7 +9,7 @@ where
     Self: Into<Command>,
 {
     /// Add an argument if a predicate returns true, largely for easier chaining
-    fn arg_if<'c, P, S: AsRef<OsStr>>(&'c mut self, predicate: P, arg: S) -> &'c mut Self
+    fn arg_if<P, S: AsRef<OsStr>>(&mut self, predicate: P, arg: S) -> &mut Self
     where
         P: FnOnce() -> bool;
     /// Configures the presence of `--verbose` and `--quiet` flags
@@ -21,7 +21,7 @@ where
 }
 
 impl CommandExt for Command {
-    fn arg_if<'c, P, S: AsRef<OsStr>>(&'c mut self, predicate: P, arg: S) -> &'c mut Self
+    fn arg_if<P, S: AsRef<OsStr>>(&mut self, predicate: P, arg: S) -> &mut Self
     where
         P: FnOnce() -> bool,
     {
@@ -31,7 +31,7 @@ impl CommandExt for Command {
         self
     }
 
-    fn add_loudness_args<'c, 'f>(&'c mut self, loudness: &LoudnessOpts) -> &mut Self {
+    fn add_loudness_args<'c, 'f>(&'c mut self, loudness: &'f LoudnessOpts) -> &mut Self {
         self.arg_if(|| loudness.quiet, "--quiet")
             .arg_if(|| loudness.verbose, "--verbose")
     }
