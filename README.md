@@ -1,7 +1,7 @@
 # cargo-fel4
 
 ```
-A cargo subcommand for automating fel4 (seL4 for Rust) development
+A cargo subcommand for automating feL4 (seL4 for Rust) development
 ```
 
 ## Overview
@@ -13,7 +13,7 @@ into a runnable seL4 application.
 
 ## Getting Started
 
-Once installed, use `cargo fel4 new my-project` to create a new fel4 project, which is a regular
+Once installed, use `cargo fel4 new my-project` to create a new feL4 project, which is a regular
 Rust `no_std` library project with a few additional configuration frills.
 
 In that project, running `cargo fel4 build` will generate a seL4 application
@@ -21,15 +21,15 @@ wrapping your library code from `src/lib.rs`, and `cargo fel4 simulate` will run
 
 Access to seL4 capabilities is presently through the [libsel4-sys library](https://github.com/PolySync/libsel4-sys),
 a thin binding layer around seL4. This wrapper is built and configured according to your
-fel4 project settings, stored in your project's `fel4.toml` manifest file.
+feL4 project settings, stored in your project's `fel4.toml` manifest file.
 
-fel4 projects come with a example [property-based](https://github.com/AltSysrq/proptest) test suite to demonstrate how to conduct
-tests in the fel4 context. Try it out with `cargo fel4 test build && cargo fel4 test simulate`
+feL4 projects come with a example [property-based](https://github.com/AltSysrq/proptest) test suite to demonstrate how to conduct
+tests in the feL4 context. Try it out with `cargo fel4 test build && cargo fel4 test simulate`
 
 ### Dependencies
 
 `cargo-fel4` works on top of several other tools to operate, so you'll need Rust with Cargo, Xargo,
-CMake, Ninja, and QEMU to build and run fel4 projects.
+CMake, Ninja, and QEMU to build and run feL4 projects.
 
 #### Linux
 
@@ -150,7 +150,7 @@ my-project/
 
 #### Build a feL4 Project
 
-To build a cargo-fel4 project:
+To build a feL4 project using cargo-fel4:
 
 ```
 $ cd my-project/
@@ -160,7 +160,7 @@ $ cargo fel4 build
 
 ### Simulate a feL4 Project
 
-To simulate a cargo-fel4 project with QEMU:
+To simulate a feL4 project with QEMU via cargo-fel4:
 
 ```
 $ cd my-project/
@@ -172,13 +172,13 @@ $ cargo fel4 simulate
 
 cargo-fel4 will generate a basic set of property tests when creating a new project.
 
-Build a cargo-fel4 test application:
+Build a feL4 test application:
 
 ```
 $ cargo fel4 test build
 ```
 
-Simulate a cargo-fel4 test application:
+Simulate a feL4 test application:
 
 ```
 $ cargo fel4 test simulate
@@ -192,14 +192,14 @@ The manifest file is responsible for prescribing a high-level configuration for 
 infrastructure, as well as the underlying `libsel4-sys` package CMake build system.
 
 Boolean properties specified in the `fel4.toml` are applied as Rust features
-to fel4 projects during `cargo fel4 build`, so it's possible to
+to feL4 projects during `cargo fel4 build`, so it's possible to
 do compile-time configuration to account for variations in available seL4 options.
 
 The `fel4.toml` manifest resides in the project's root directory, and contains several properties
 related to the location of input/output artifacts.
 These path properties are relative to project's root directory.
 
-For example, a newly generated cargo-fel4 project contains the following in `fel4.toml`:
+For example, a newly generated feL4 project contains the following in `fel4.toml`:
 
 ```
 [fel4]
@@ -237,7 +237,7 @@ the specifications shipped with cargo-fel4.
 
 ### Test Dependencies
 
-The tests for `cargo-fel4` (as opposed to the tests within a given fel4 project)
+The tests for `cargo-fel4` (as opposed to the tests within a given feL4 project)
 requires installing the standard dependencies listed earlier.
 
 
