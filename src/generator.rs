@@ -5,9 +5,9 @@ use cmake_codegen::simple_flags_to_rust_writer;
 use cmake_config::SimpleFlag;
 use config::Arch;
 
-const ARMV7_ASM: &'static str = include_str!("asm/arm.s");
-const X86_ASM: &'static str = include_str!("asm/x86.s");
-const X86_64_ASM: &'static str = include_str!("asm/x86_64.s");
+const ARMV7_ASM: &str = include_str!("asm/arm.s");
+const X86_ASM: &str = include_str!("asm/x86.s");
+const X86_64_ASM: &str = include_str!("asm/x86_64.s");
 
 pub struct Generator<'a, 'b, 'c, W: Write + 'a> {
     writer: &'a mut W,
@@ -38,18 +38,18 @@ impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
         self.generate_features_and_crates()?;
         writeln!(self.writer, "extern crate {};", self.package_module_name)?;
 
-        self.writer.write(
+        self.writer.write_all(
             b"
 use core::mem;
 use sel4_sys::*;\n\n",
         )?;
 
-        self.writer.write(b"#[cfg(feature = \"alloc\")]\n")?;
-        self.writer.write(b"#[global_allocator]\n")?;
+        self.writer.write_all(b"#[cfg(feature = \"alloc\")]\n")?;
+        self.writer.write_all(b"#[global_allocator]\n")?;
         self.writer
-            .write(b"static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;\n")?;
+            .write_all(b"static ALLOCATOR: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;\n")?;
 
-        self.writer.write(
+        self.writer.write_all(
             b"
 // include the seL4 kernel configurations
 #[allow(dead_code)]
@@ -57,12 +57,13 @@ use sel4_sys::*;\n\n",
 pub mod sel4_config {\n",
         )?;
         simple_flags_to_rust_writer(self.flags, self.writer, 4)?;
-        self.writer.write(b"}\n\n")?;
+        self.writer.write_all(b"}\n\n")?;
 
-        self.writer.write(BOOT_INFO_AND_LANG_ITEM_CODE.as_bytes())?;
+        self.writer
+            .write_all(BOOT_INFO_AND_LANG_ITEM_CODE.as_bytes())?;
 
         writeln!(self.writer, r####"#[cfg(feature = "KernelDebugBuild")]"####)?;
-        self.writer.write(
+        self.writer.write_all(
             b"#[inline(always)]
 pub fn debug_halt() {
     unsafe { sel4_sys::seL4_DebugHalt() };
@@ -86,10 +87,10 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
         ",
         )?;
         self.generate_main()?;
-        let asm = match self.arch {
-            &Arch::X86 => X86_ASM,
-            &Arch::X86_64 => X86_64_ASM,
-            &Arch::Armv7 => ARMV7_ASM,
+        let asm = match *self.arch {
+            Arch::X86 => X86_ASM,
+            Arch::X86_64 => X86_64_ASM,
+            Arch::Armv7 => ARMV7_ASM,
         };
         writeln!(self.writer, "\nglobal_asm!(r###\"{}\"###);\n", asm)?;
         Ok(())
@@ -107,20 +108,20 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
 #![cfg_attr(feature = \"alloc\", feature(global_allocator))]\n\n"
         )?;
 
-        self.writer.write(b"extern crate sel4_sys;\n")?;
-        self.writer.write(b"#[cfg(feature = \"alloc\")]\n")?;
-        self.writer.write(b"extern crate wee_alloc;\n")?;
-        self.writer.write(b"#[cfg(feature = \"alloc\")]\n")?;
-        self.writer.write(b"extern crate alloc;\n")?;
+        self.writer.write_all(b"extern crate sel4_sys;\n")?;
+        self.writer.write_all(b"#[cfg(feature = \"alloc\")]\n")?;
+        self.writer.write_all(b"extern crate wee_alloc;\n")?;
+        self.writer.write_all(b"#[cfg(feature = \"alloc\")]\n")?;
+        self.writer.write_all(b"extern crate alloc;\n")?;
         self.writer
-            .write(b"#[cfg(all(feature = \"test\", feature = \"alloc\"))]\n")?;
-        self.writer.write(b"#[macro_use]\n")?;
-        self.writer.write(b"extern crate proptest;\n")?;
+            .write_all(b"#[cfg(all(feature = \"test\", feature = \"alloc\"))]\n")?;
+        self.writer.write_all(b"#[macro_use]\n")?;
+        self.writer.write_all(b"extern crate proptest;\n")?;
         Ok(())
     }
 
     fn generate_main(&mut self) -> Result<(), Error> {
-        self.writer.write(
+        self.writer.write_all(
             b"
 fn main() {
     let bootinfo = unsafe { &*BOOTINFO };
@@ -163,8 +164,8 @@ fn main() {
     let mut regs: seL4_UserContext = unsafe { mem::zeroed() };\n",
         )?;
 
-        match self.arch {
-            &Arch::X86 | &Arch::X86_64 => {
+        match *self.arch {
+            Arch::X86 | Arch::X86_64 => {
                 writeln!(
                     self.writer,
                     "    #[cfg(feature = \"test\")]
@@ -175,7 +176,7 @@ fn main() {
                 )?;
                 writeln!(self.writer, "    regs.rsp = stack_top as seL4_Word;")?;
             }
-            &Arch::Armv7 => {
+            Arch::Armv7 => {
                 writeln!(
                     self.writer,
                     "    #[cfg(feature = \"test\")]
@@ -187,7 +188,7 @@ fn main() {
                 writeln!(self.writer, "    regs.sp = stack_top as seL4_Word;")?;
             }
         }
-        self.writer.write(
+        self.writer.write_all(
             b"
     let _: u32 =
         unsafe { seL4_TCB_WriteRegisters(tcb_cap, 0, 0, 2, &mut regs) };
@@ -207,7 +208,7 @@ fn main() {
     }
 }
 
-const BOOT_INFO_AND_LANG_ITEM_CODE: &'static str = r##"
+const BOOT_INFO_AND_LANG_ITEM_CODE: &str = r##"
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
 static mut RUN_ONCE: bool = false;
 

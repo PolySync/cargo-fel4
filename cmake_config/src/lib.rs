@@ -140,8 +140,8 @@ impl SimpleFlag {
                 let literal = format!("\"{}\"", &v);
                 let valid_literal = match parse_str::<Expr>(&literal) {
                     Ok(Expr::Lit(ExprLit {
-                        attrs: _,
                         lit: Lit::Str(_),
+                        ..
                     })) => true,
                     _ => false,
                 };
@@ -151,7 +151,7 @@ impl SimpleFlag {
                 }
                 let code = format!("pub const {}:&'static str = {};", &k, &literal);
                 Ok(RustConstItem {
-                    code: code,
+                    code,
                     identifier: k.clone(),
                 })
             }

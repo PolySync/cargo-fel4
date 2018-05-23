@@ -99,18 +99,17 @@ pub fn generate_tests_source_files(base_dir: Option<&Path>) -> Result<(), Error>
     Ok(())
 }
 
-const FEL4_TARGET_SPEC_README: &'static str = include_str!("../target_specs/README.md");
+const FEL4_TARGET_SPEC_README: &str = include_str!("../target_specs/README.md");
 
-const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &'static str =
+const FEL4_TARGET_SPEC_X86_64_SEL4_FEL4: &str =
     include_str!("../target_specs/x86_64-sel4-fel4.json");
 
-const FEL4_TARGET_SPEC_ARMV7_SEL4_FEL4: &'static str =
-    include_str!("../target_specs/armv7-sel4-fel4.json");
+const FEL4_TARGET_SPEC_ARMV7_SEL4_FEL4: &str = include_str!("../target_specs/armv7-sel4-fel4.json");
 
-const APP_LIB_CODE: &'static str = include_str!("../templates/lib.rs");
+const APP_LIB_CODE: &str = include_str!("../templates/lib.rs");
 
-const XARGO_TOML_TEXT: &'static str = include_str!("../templates/Xargo.toml");
+const XARGO_TOML_TEXT: &str = include_str!("../templates/Xargo.toml");
 
-const CARGO_TOML_TEXT: &'static str = include_str!("../templates/Cargo.toml.part");
+const CARGO_TOML_TEXT: &str = include_str!("../templates/Cargo.toml.part");
 
-const TEST_LIB_CODE: &'static str = include_str!("../templates/fel4_test.rs");
+const TEST_LIB_CODE: &str = include_str!("../templates/fel4_test.rs");

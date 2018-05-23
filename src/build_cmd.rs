@@ -95,8 +95,8 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
     // To accomplish this, we just re-build libsel4-sys
     // with an extra environment variable which gives
     // elfloader-tool a path to the root-task binary
-    match &config.fel4_config.target {
-        &SupportedTarget::Armv7Sel4Fel4 => {
+    match config.fel4_config.target {
+        SupportedTarget::Armv7Sel4Fel4 => {
             construct_libsel4_build_command(subcmd, &config, &cross_layer_locations)
                 .env(
                     "FEL4_ROOT_TASK_IMAGE_PATH",
@@ -273,7 +273,7 @@ impl BuildCommandExt for Command {
         self
     }
 
-    fn handle_arm_edge_case<'c, 'f>(&'c mut self, target: &SupportedTarget) -> &mut Self {
+    fn handle_arm_edge_case<'c, 'f>(&'c mut self, target: &'f SupportedTarget) -> &mut Self {
         // There seems to be an issue with `compiler_builtins` imposing
         // a default compiler used by the `c` feature/dependency; where
         // it no longer picks up a sane cross-compiler (when host != target triple).
@@ -289,8 +289,8 @@ impl BuildCommandExt for Command {
         // See the following issues:
         // `xargo/issues/216`
         // `cargo-fel4/issues/18`
-        match target {
-            &SupportedTarget::Armv7Sel4Fel4 => {
+        match *target {
+            SupportedTarget::Armv7Sel4Fel4 => {
                 self.env("CC_armv7-sel4-fel4", "arm-linux-gnueabihf-gcc")
             }
             _ => self,
@@ -300,7 +300,7 @@ impl BuildCommandExt for Command {
 
 fn merge_feature_flags_with_rustflags_env_var(feature_flags: &[String]) -> String {
     let mut output: String = match env::var("RUSTFLAGS") {
-        Ok(s) => s.into(),
+        Ok(s) => s,
         Err(env::VarError::NotUnicode(_)) => String::new(),
         Err(env::VarError::NotPresent) => String::new(),
     };

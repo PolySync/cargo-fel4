@@ -177,9 +177,9 @@ pub enum Arch {
 
 impl<'a> From<&'a SupportedTarget> for Arch {
     fn from(target: &'a SupportedTarget) -> Self {
-        match target {
-            &SupportedTarget::X8664Sel4Fel4 => Arch::X86_64,
-            &SupportedTarget::Armv7Sel4Fel4 => Arch::Armv7,
+        match *target {
+            SupportedTarget::X8664Sel4Fel4 => Arch::X86_64,
+            SupportedTarget::Armv7Sel4Fel4 => Arch::Armv7,
         }
     }
 }
