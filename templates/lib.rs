@@ -31,5 +31,5 @@ macro_rules! debug_println {
 }
 
 pub fn run() {
-    debug_println!("\nhello from a fel4 app!\n");
+    debug_println!("\nhello from a feL4 app!\n");
 }
