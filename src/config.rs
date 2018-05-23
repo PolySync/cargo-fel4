@@ -259,34 +259,30 @@ pub fn get_resolved_config<P: AsRef<Path>>(
 ) -> Result<ResolvedConfig, Error> {
     let (pkg_name, pkg_module_name, root_dir) = {
         let metadata = cargo_metadata::metadata(Some(cargo_manifest_path.as_ref()))?;
-        if metadata.packages.len() != 1 {
+        if metadata.packages.len() > 1 {
             return Err(Error::ConfigError(String::from(
-                "a fel4 build requires a singular top-level package",
+                "a fel4 build currently requires a singular top-level package",
             )));
         };
-        let mut mani_path = Path::new(&metadata.packages[0].manifest_path).to_path_buf();
-        mani_path.pop();
-        let pkg = match metadata.packages.get(0) {
-            Some(p) => p,
-            None => {
-                return Err(Error::ConfigError(String::from(
-                    "couldn't retrieve package details",
-                )))
-            }
-        };
-        (pkg.name.clone(), pkg.name.replace("-", "_"), mani_path)
+
+        if let Some(pkg) = metadata.packages.first() {
+            let root_dir = {
+                let mut p = PathBuf::from(&pkg.manifest_path);
+                p.pop();
+                p
+            };
+            (pkg.name.clone(), pkg.name.replace("-", "_"), root_dir)
+        } else {
+            return Err(Error::ConfigError(String::from(
+                "a fel4 build currently requires a singular top-level package",
+            )));
+        }
     };
-
-    let config_build_profile = build_profile.as_fel4_config_build_profile();
-
-    let fel4_config: Fel4Config =
-        match get_fel4_config(root_dir.join("fel4.toml"), &config_build_profile) {
-            Ok(f) => f,
-            Err(e) => return Err(Error::ConfigError(format!("{}", e))),
-        };
-
+    let fel4_config: Fel4Config = get_fel4_config(
+        root_dir.join("fel4.toml"),
+        &build_profile.as_fel4_config_build_profile(),
+    ).map_err(|e| Error::ConfigError(format!("{}", e)))?;
     let arch = Arch::from(&fel4_config.target);
-
     Ok(ResolvedConfig {
         root_dir,
         pkg_name,
