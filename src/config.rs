@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use cargo_metadata;
 use fel4_config::{
     get_fel4_config, get_full_manifest, BuildProfile as ConfigBuildProfile, Fel4Config,
-    FullFel4Manifest,
+    FullFel4Manifest, SupportedTarget,
 };
 use structopt::StructOpt;
 
@@ -127,42 +127,43 @@ pub struct CleanCmd {
     pub cargo_manifest_path: PathBuf,
 }
 
-impl Fel4SubCmd {
-    /// Determine the appropriate feL4 build profile from the given subcommand.
-    pub fn build_profile(&self) -> Option<Fel4BuildProfile> {
-        match *self {
-            Fel4SubCmd::BuildCmd(ref c) => Some(build_mode_to_profile(c.release, c.tests)),
-            Fel4SubCmd::SimulateCmd(ref c) => Some(build_mode_to_profile(c.release, c.tests)),
-            Fel4SubCmd::NewCmd(_) => None,
-            Fel4SubCmd::TestCmd(ref c) => Some(build_mode_to_profile(c.release, true)),
-            Fel4SubCmd::CleanCmd(_) => None,
-        }
+impl<'a> From<&'a BuildCmd> for Fel4BuildProfile {
+    fn from(c: &'a BuildCmd) -> Self {
+        build_flags_to_profile(c.release, c.tests)
     }
 }
 
-fn build_mode_to_profile(is_release: bool, is_test: bool) -> Fel4BuildProfile {
-    if is_test {
-        if is_release {
-            Fel4BuildProfile::TestRelease
-        } else {
-            Fel4BuildProfile::TestDebug
-        }
-    } else if is_release {
-        Fel4BuildProfile::Release
-    } else {
-        Fel4BuildProfile::Debug
+impl<'a> From<&'a SimulateCmd> for Fel4BuildProfile {
+    fn from(c: &'a SimulateCmd) -> Self {
+        build_flags_to_profile(c.release, c.tests)
     }
 }
 
+impl<'a> From<&'a TestCmd> for Fel4BuildProfile {
+    fn from(c: &'a TestCmd) -> Self {
+        build_flags_to_profile(c.release, true)
+    }
+}
+
+fn build_flags_to_profile(is_release: bool, is_test: bool) -> Fel4BuildProfile {
+    match (is_release, is_test) {
+        (true, true) => Fel4BuildProfile::TestRelease,
+        (true, false) => Fel4BuildProfile::Release,
+        (false, true) => Fel4BuildProfile::TestDebug,
+        (false, false) => Fel4BuildProfile::Debug,
+    }
+}
+
+/// Wraps a fully resolved Fel4Config instance, along with summarized package
+/// metadata
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct ResolvedConfig {
     pub root_dir: PathBuf,
     /// The end user application's package name
     pub pkg_name: String,
     /// The module name of the user application's package
     pub pkg_module_name: String,
     pub arch: Arch,
-    pub build_profile: Option<Fel4BuildProfile>,
     pub fel4_config: Fel4Config,
 }
 
@@ -174,21 +175,12 @@ pub enum Arch {
     Armv7,
 }
 
-impl Arch {
-    fn from_target_str(target: &str) -> Result<Self, Error> {
-        if target.contains("x86_64") {
-            return Ok(Arch::X86_64);
+impl<'a> From<&'a SupportedTarget> for Arch {
+    fn from(target: &'a SupportedTarget) -> Self {
+        match target {
+            &SupportedTarget::X8664Sel4Fel4 => Arch::X86_64,
+            &SupportedTarget::Armv7Sel4Fel4 => Arch::Armv7,
         }
-        if target.contains("armv7") {
-            return Ok(Arch::Armv7);
-        }
-        if target.contains("i686") {
-            return Ok(Arch::X86);
-        }
-        Err(Error::ConfigError(format!(
-            "could not derive architecture from target str: {}",
-            target
-        )))
     }
 }
 
@@ -225,6 +217,26 @@ impl Fel4BuildProfile {
     }
 }
 
+pub struct ManifestWithRootDir {
+    pub fel4_manifest: FullFel4Manifest,
+    pub root_dir: PathBuf,
+}
+
+pub fn get_fel4_manifest_with_root_dir<P: AsRef<Path>>(
+    cargo_manifest_file_path: P,
+) -> Result<ManifestWithRootDir, Error> {
+    let fel4_manifest = get_fel4_manifest(cargo_manifest_file_path.as_ref())?;
+    let root_dir = {
+        let mut p = cargo_manifest_file_path.as_ref().to_path_buf();
+        p.pop();
+        p
+    };
+    Ok(ManifestWithRootDir {
+        fel4_manifest,
+        root_dir,
+    })
+}
+
 pub fn get_fel4_manifest<P: AsRef<Path>>(
     cargo_manifest_file_path: P,
 ) -> Result<FullFel4Manifest, Error> {
@@ -241,61 +253,41 @@ fn fel4_manifest_path_from_cargo_manifest_path<P: AsRef<Path>>(
     p.join("fel4.toml")
 }
 
-pub fn gather(cmd: &Fel4SubCmd) -> Result<Config, Error> {
-    let cargo_manifest_path = match cmd {
-        Fel4SubCmd::BuildCmd(c) => Path::new(&c.cargo_manifest_path).to_path_buf(),
-        Fel4SubCmd::SimulateCmd(c) => Path::new(&c.cargo_manifest_path).to_path_buf(),
-        Fel4SubCmd::TestCmd(c) => Path::new(&c.cargo_manifest_path).to_path_buf(),
-        Fel4SubCmd::NewCmd(c) => Path::new(&c.path).join("Cargo.toml"),
-        Fel4SubCmd::CleanCmd(_) => Path::new("./Cargo.toml").to_path_buf(),
-    };
-
+pub fn get_resolved_config<P: AsRef<Path>>(
+    cargo_manifest_path: P,
+    build_profile: &Fel4BuildProfile,
+) -> Result<ResolvedConfig, Error> {
     let (pkg_name, pkg_module_name, root_dir) = {
-        let metadata = cargo_metadata::metadata(Some(&cargo_manifest_path))?;
-        if metadata.packages.len() != 1 {
+        let metadata = cargo_metadata::metadata(Some(cargo_manifest_path.as_ref()))?;
+        if metadata.packages.len() > 1 {
             return Err(Error::ConfigError(String::from(
-                "a fel4 build requires a singular top-level package",
+                "a fel4 build currently requires a singular top-level package",
             )));
         };
-        let mut mani_path = Path::new(&metadata.packages[0].manifest_path).to_path_buf();
-        mani_path.pop();
-        let pkg = match metadata.packages.get(0) {
-            Some(p) => p,
-            None => {
-                return Err(Error::ConfigError(String::from(
-                    "couldn't retrieve package details",
-                )))
-            }
-        };
-        (pkg.name.clone(), pkg.name.replace("-", "_"), mani_path)
+
+        if let Some(pkg) = metadata.packages.first() {
+            let root_dir = {
+                let mut p = PathBuf::from(&pkg.manifest_path);
+                p.pop();
+                p
+            };
+            (pkg.name.clone(), pkg.name.replace("-", "_"), root_dir)
+        } else {
+            return Err(Error::ConfigError(String::from(
+                "a fel4 build currently requires a singular top-level package",
+            )));
+        }
     };
-
-    let build_profile = cmd.build_profile();
-
-    let config_build_profile = if let Some(p) = build_profile {
-        p.as_fel4_config_build_profile()
-    } else {
-        // TODO - better error message
-        return Err(Error::ConfigError(
-            "The build profile could not determined".to_string(),
-        ));
-    };
-
-    let fel4_config: Fel4Config =
-        match get_fel4_config(root_dir.join("fel4.toml"), &config_build_profile) {
-            Ok(f) => f,
-            Err(e) => return Err(Error::ConfigError(format!("{}", e))),
-        };
-
-    // TODO - skip the trip through strings!
-    let arch = Arch::from_target_str(fel4_config.target.full_name())?;
-
-    Ok(Config {
+    let fel4_config: Fel4Config = get_fel4_config(
+        root_dir.join("fel4.toml"),
+        &build_profile.as_fel4_config_build_profile(),
+    ).map_err(|e| Error::ConfigError(format!("{}", e)))?;
+    let arch = Arch::from(&fel4_config.target);
+    Ok(ResolvedConfig {
         root_dir,
         pkg_name,
         pkg_module_name,
         arch,
-        build_profile,
         fel4_config,
     })
 }

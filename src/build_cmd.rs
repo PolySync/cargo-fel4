@@ -10,42 +10,25 @@ use std::fs::{self, canonicalize, File};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::{gather_config, Error};
+use super::Error;
 use cmake_codegen::{cache_to_interesting_flags, truthy_boolean_flags_as_rust_identifiers};
-use config::{BuildCmd, Config, Fel4SubCmd};
+use config::{get_resolved_config, BuildCmd, Fel4BuildProfile, ResolvedConfig};
 use generator::Generator;
 
 pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
-    let config: Config = gather_config(&Fel4SubCmd::BuildCmd(subcmd.clone()))?;
-
-    let build_profile = if let Some(p) = config.build_profile {
-        p.as_fel4_config_build_profile()
-    } else {
-        // TODO - better error message
-        return Err(Error::ConfigError(
-            "The build profile could not determined".to_string(),
-        ));
-    };
-
-    let artifact_profile_subdir = if let Some(p) = config.build_profile {
-        p.artifact_subdir_path()
-    } else {
-        // TODO - better error message
-        return Err(Error::ConfigError(
-            "The build profile could not determined".to_string(),
-        ));
-    };
+    let build_profile = Fel4BuildProfile::from(subcmd);
+    let config: ResolvedConfig = get_resolved_config(&subcmd.cargo_manifest_path, &build_profile)?;
 
     let artifact_path = &config
         .root_dir
         .join(&config.fel4_config.artifact_path)
-        .join(artifact_profile_subdir);
+        .join(build_profile.artifact_subdir_path());
 
     let target_build_cache_path = config
         .root_dir
         .join("target")
         .join(config.fel4_config.target.full_name())
-        .join(&build_profile.full_name());
+        .join(build_profile.as_fel4_config_build_profile().full_name());
 
     info!("\ntarget build cache: {:?}", target_build_cache_path,);
 
@@ -194,7 +177,7 @@ fn is_current_dir_root_dir<P: AsRef<Path>>(root_dir: P) -> Result<bool, ::std::i
 
 fn construct_libsel4_build_command<P>(
     subcmd: &BuildCmd,
-    config: &Config,
+    config: &ResolvedConfig,
     locations: &CrossLayerLocations<P>,
 ) -> Command
 where
@@ -228,7 +211,7 @@ where
 /// more feasible in our environment
 fn construct_root_task_build_command<P>(
     subcmd: &BuildCmd,
-    config: &Config,
+    config: &ResolvedConfig,
     cross_layer_locations: &CrossLayerLocations<P>,
 ) -> Command
 where

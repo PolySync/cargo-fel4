@@ -1,25 +1,18 @@
 use std::path::Path;
 use std::process::Command;
 
-use super::{gather_config, Error};
+use super::Error;
 use command_ext::CommandExt;
-use config::{Config, Fel4SubCmd, SimulateCmd};
+use config::{get_fel4_manifest_with_root_dir, Fel4BuildProfile, ManifestWithRootDir, SimulateCmd};
 
-pub fn handle_simulate_cmd(subcmd: &SimulateCmd) -> Result<(), Error> {
-    let config: Config = gather_config(&Fel4SubCmd::SimulateCmd(subcmd.clone()))?;
-
-    let artifact_profile_subdir = if let Some(p) = config.build_profile {
-        p.artifact_subdir_path()
-    } else {
-        // TODO - better error message
-        return Err(Error::ConfigError(
-            "The build profile could not determined".to_string(),
-        ));
-    };
-
-    let artifact_path = Path::new(&config.root_dir)
-        .join(config.fel4_config.artifact_path)
-        .join(artifact_profile_subdir);
+pub fn handle_simulate_cmd(cmd: &SimulateCmd) -> Result<(), Error> {
+    let ManifestWithRootDir {
+        fel4_manifest,
+        root_dir,
+    } = get_fel4_manifest_with_root_dir(&cmd.cargo_manifest_path)?;
+    let artifact_path = Path::new(&root_dir)
+        .join(fel4_manifest.artifact_path)
+        .join(Fel4BuildProfile::from(cmd).artifact_subdir_path());
 
     let sim_script_path = artifact_path.join("simulate");
 

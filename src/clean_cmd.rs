@@ -4,17 +4,13 @@ use std::process::Command;
 
 use super::Error;
 use command_ext::CommandExt;
-use config::{get_fel4_manifest, CleanCmd};
+use config::{get_fel4_manifest_with_root_dir, CleanCmd, ManifestWithRootDir};
 
 pub fn handle_clean_cmd(clean_cmd: &CleanCmd) -> Result<(), Error> {
-    let cargo_manifest_path = &clean_cmd.cargo_manifest_path;
-    let root_dir = {
-        let mut p = cargo_manifest_path.clone();
-        p.pop();
-        p
-    };
-
-    let fel4_manifest = get_fel4_manifest(cargo_manifest_path)?;
+    let ManifestWithRootDir {
+        fel4_manifest,
+        root_dir,
+    } = get_fel4_manifest_with_root_dir(&clean_cmd.cargo_manifest_path)?;
     let artifact_path = Path::new(&root_dir).join(fel4_manifest.artifact_path);
 
     clean_cargo_build_cache(clean_cmd)?;
