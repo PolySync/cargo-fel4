@@ -24,8 +24,8 @@ mod test_cmd;
 pub use build_cmd::handle_build_cmd;
 pub use clean_cmd::handle_clean_cmd;
 pub use config::{
-    gather as gather_config, BuildCmd, CargoFel4Cli, CleanCmd, Config, Fel4SubCmd, LoudnessOpts,
-    NewCmd, SimulateCmd, TestCmd, TestSubCmd,
+    BuildCmd, CargoFel4Cli, CleanCmd, Fel4SubCmd, LoudnessOpts, NewCmd, ResolvedConfig,
+    SimulateCmd, TestCmd, TestSubCmd,
 };
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;

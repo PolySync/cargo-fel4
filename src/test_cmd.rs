@@ -9,11 +9,6 @@ pub fn handle_test_cmd(test_cmd: &TestCmd) -> Result<(), Error> {
             run_test_build(test_cmd)?;
         }
         TestSubCmd::Simulate => run_test_simulation(test_cmd)?,
-        _ => {
-            generate_tests_source_files(test_cmd.cargo_manifest_path.parent())?;
-            run_test_build(test_cmd)?;
-            run_test_simulation(test_cmd)?
-        }
     };
 
     Ok(())
