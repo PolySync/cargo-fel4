@@ -140,8 +140,7 @@ impl SimpleFlag {
                 let literal = format!("\"{}\"", &v);
                 let valid_literal = match parse_str::<Expr>(&literal) {
                     Ok(Expr::Lit(ExprLit {
-                        lit: Lit::Str(_),
-                        ..
+                        lit: Lit::Str(_), ..
                     })) => true,
                     _ => false,
                 };
