@@ -16,6 +16,7 @@ mod clean_cmd;
 mod cmake_codegen;
 mod command_ext;
 mod config;
+mod deploy_cmd;
 mod generator;
 mod new_cmd;
 mod simulate_cmd;
@@ -27,6 +28,7 @@ pub use config::{
     BuildCmd, CargoFel4Cli, CleanCmd, Fel4SubCmd, LoudnessOpts, NewCmd, ResolvedConfig,
     SimulateCmd, TestCmd, TestSubCmd,
 };
+pub use deploy_cmd::handle_deploy_cmd;
 pub use new_cmd::handle_new_cmd;
 pub use simulate_cmd::handle_simulate_cmd;
 pub use test_cmd::handle_test_cmd;

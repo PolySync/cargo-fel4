@@ -22,6 +22,8 @@ pub enum Fel4SubCmd {
     BuildCmd(BuildCmd),
     #[structopt(name = "simulate", about = "Simulate a feL4 project with QEMU")]
     SimulateCmd(SimulateCmd),
+    #[structopt(name = "deploy", about = "Deploy a feL4 project")]
+    DeployCmd(DeployCmd),
     #[structopt(name = "new", about = "Create a new feL4 project")]
     NewCmd(NewCmd),
     #[structopt(name = "test", about = "Build and run feL4 tests")]
@@ -74,6 +76,24 @@ pub struct SimulateCmd {
 }
 
 #[derive(Debug, Clone, StructOpt)]
+pub struct DeployCmd {
+    #[structopt(flatten)]
+    pub loudness: LoudnessOpts,
+    #[structopt(name = "release", long = "release", help = "Deploy release artifacts")]
+    pub release: bool,
+    #[structopt(name = "tests", long = "tests", help = "Deploy test artifacts")]
+    pub tests: bool,
+    #[structopt(
+        name = "cargo-manifest-path",
+        long = "manifest-path",
+        parse(from_os_str),
+        default_value = "./Cargo.toml",
+        help = "Path to the Cargo.toml manifest of the fel4 project"
+    )]
+    pub cargo_manifest_path: PathBuf,
+}
+
+#[derive(Debug, Clone, StructOpt)]
 pub struct NewCmd {
     #[structopt(flatten)]
     pub loudness: LoudnessOpts,
@@ -111,6 +131,8 @@ pub enum TestSubCmd {
     Build,
     #[structopt(name = "simulate", about = "Simulate the feL4 test application")]
     Simulate,
+    #[structopt(name = "deploy", about = "Deploy the feL4 test application")]
+    Deploy,
 }
 
 #[derive(Debug, Clone, StructOpt)]
@@ -135,6 +157,12 @@ impl<'a> From<&'a BuildCmd> for Fel4BuildProfile {
 
 impl<'a> From<&'a SimulateCmd> for Fel4BuildProfile {
     fn from(c: &'a SimulateCmd) -> Self {
+        build_flags_to_profile(c.release, c.tests)
+    }
+}
+
+impl<'a> From<&'a DeployCmd> for Fel4BuildProfile {
+    fn from(c: &'a DeployCmd) -> Self {
         build_flags_to_profile(c.release, c.tests)
     }
 }

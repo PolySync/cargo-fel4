@@ -43,6 +43,12 @@ $ sudo apt-get install qemu-system-x86
 $ sudo apt-get install qemu-system-arm
 ```
 
+#### DFU USB Programmer
+
+```
+sudo apt-get install dfu-util
+```
+
 #### CMake
 
 CMake version `3.7.2` or greater is required.
@@ -55,7 +61,7 @@ Ninja version `1.7.1` or greater is required.
 
 Binary releases are available from [github](https://github.com/ninja-build/ninja/releases).
 
-#### Cross compiler toolchains
+#### Cross Compiler Toolchains
 
 ```
 $ sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
@@ -118,6 +124,7 @@ FLAGS:
 SUBCOMMANDS:
     build       Build a feL4 project
     clean       Remove generated artifacts
+    deploy      Deploy a feL4 project
     help        Prints this message or the help of the given subcommand(s)
     new         Create a new feL4 project
     simulate    Simulate a feL4 project with QEMU
@@ -158,7 +165,7 @@ $ cd my-project/
 $ cargo fel4 build
 ```
 
-### Simulate a feL4 Project
+#### Simulate a feL4 Project
 
 To simulate a feL4 project with QEMU via cargo-fel4:
 
@@ -166,6 +173,16 @@ To simulate a feL4 project with QEMU via cargo-fel4:
 $ cd my-project/
 
 $ cargo fel4 simulate
+```
+
+#### Deploy a feL4 Project
+
+To deploy a feL4 project on to the target platform using cargo-fel4:
+
+```
+$ cd my-project/
+
+$ cargo fel4 deploy
 ```
 
 #### Running Tests
@@ -182,6 +199,12 @@ Simulate a feL4 test application:
 
 ```
 $ cargo fel4 test simulate
+```
+
+Deploy a feL4 test application:
+
+```
+$ cargo fel4 test deploy
 ```
 
 #### Configuration
@@ -243,6 +266,41 @@ requires installing the standard dependencies listed earlier.
 
 ### Running Tests
 `cargo-fel4`'s internal tests can be exercised by running `cargo test`
+
+## Deployment
+
+### DFU Deployment on the TX1 Platform
+
+To deploy a feL4 application via DFU, be sure to have a serial connection set up in order to
+interact with the U-Boot boot loader.
+
+Attach the USB-mini end of a USB cable to the USB-mini port on the TX1.
+Then plug in the power supply for the TX1 and power it on.
+
+Once the TX1 is powered on, watch the serial output so you can stop the boot process at the
+U-boot command prompt.
+
+Then at the U-boot command prompt, enter the following:
+
+```
+setenv dfu_alt_info "kernel ram 0x83000000 0x1000000"
+setenv bootcmd_dfu "dfu 0 ram 0; go 0x83000000"
+saveenv
+```
+
+To make U-boot enter its DFU server mode, type:
+
+```
+run bootcmd_dfu
+```
+
+U-boot will wait until an image has been uploaded.
+
+You can now deploy a cargo-fel4 application image from the host machine:
+
+```
+$ cargo fel4 deploy
+```
 
 # License
 

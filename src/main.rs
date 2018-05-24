@@ -29,6 +29,12 @@ fn main() {
                 error!("Failed to run the simulation command\n{}", e)
             }
         }
+        Fel4SubCmd::DeployCmd(c) => {
+            set_logging_level(&c.loudness);
+            if let Err(e) = cargo_fel4::handle_deploy_cmd(&c) {
+                error!("Failed to run the deploy command\n{}", e)
+            }
+        }
         Fel4SubCmd::NewCmd(c) => {
             set_logging_level(&c.loudness);
             if let Err(e) = cargo_fel4::handle_new_cmd(&c) {
