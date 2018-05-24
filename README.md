@@ -37,68 +37,101 @@ cargo-fel4 was developed using Ubuntu Xenial, but other Linux versions should wo
 
 #### QEMU
 
-```
-$ sudo apt-get install qemu-system-x86
+```bash
+sudo apt-get install qemu-system-x86
 
-$ sudo apt-get install qemu-system-arm
+sudo apt-get install qemu-system-arm
 ```
 
 #### DFU USB Programmer
 
-```
+```bash
 sudo apt-get install dfu-util
 ```
 
 #### CMake
 
-CMake version `3.7.2` or greater is required.
+CMake version `3.7.2` or greater is required due to the seL4 build system.
 
 Binary releases are available from [cmake.org](https://cmake.org/download/).
 
+An example workflow for a recent binary installation on Ubuntu
+[can be found on StackExchange's askUbuntu](https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line/865294#865294).
+
 #### Ninja
 
-Ninja version `1.7.1` or greater is required.
+Ninja version `1.7.1` or greater is required or greater is required due to the seL4 build system.
 
 Binary releases are available from [github](https://github.com/ninja-build/ninja/releases).
 
+Ubuntu users can typically install ninja using apt-get.
+
+```bash
+sudo apt-get install ninja-build
+```
+
+#### Python Tooling
+
+The underlying seL4 build system also makes use of some Python tools.
+
+```bash
+# Install python and pip, if you don't have them already
+sudo apt-get install python-pip
+
+pip install sel4-deps
+```
+
+#### seL4 Tooling
+
+The underlying seL4 build system also requires `xmlint`.
+
+```bash
+sudo apt-get install libxml2-utils
+```
+
 #### Cross Compiler Toolchains
 
-```
-$ sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+```bash
+# Used by the armv7-sel4-fel4 target
+sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+
+# Used by the aarch64-sel4-fel4 target
+sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 ```
 
 #### rustup
 
-```
+```bash
 # Download the install script
-$ curl -f -L https://static.rust-lang.org/rustup.sh -O
+wget https://static.rust-lang.org/rustup/rustup-init.sh
 
 # Install rustup
-$ sh rustup.sh
+chmod +x rustup-init.sh
+sh rustup-init.sh
 ```
 
 #### Nightly Rust
 
-```
-$ rustup install nightly
+```bash
+rustup install nightly
 ```
 
 #### Xargo
 
-```
+```bash
 # Xargo requires rust-src component
-$ rustup component add rust-src
+rustup component add rust-src
 
 # Install Xargo
-$ cargo install xargo
+cargo install xargo
 ```
 
 ## Building
 
 cargo-fel4 can be built and installed with `cargo install`:
 
-```
-$ cargo install --git https://github.com/PolySync/cargo-fel4.git
+```bash
+cargo +nightly install --git https://github.com/PolySync/cargo-fel4.git
 ```
 
 If you intend on developing `cargo-fel4`, a build is as simple
@@ -109,8 +142,8 @@ dependencies.
 
 See the output of `cargo fel4 --help` for more details.
 
-```
-$ cargo fel4 --help
+```bash
+cargo fel4 --help
 
 Build, manage and simulate feL4 system images
 
@@ -137,8 +170,8 @@ SUBCOMMANDS:
 
 To create a new project using cargo-fel4:
 
-```
-$ cargo fel4 new my-project
+```bash
+cargo fel4 new my-project
     Created library `my-project` project
 
 $ tree my-project/
@@ -159,30 +192,30 @@ my-project/
 
 To build a feL4 project using cargo-fel4:
 
-```
-$ cd my-project/
+```bash
+cd my-project/
 
-$ cargo fel4 build
+cargo fel4 build
 ```
 
 #### Simulate a feL4 Project
 
 To simulate a feL4 project with QEMU via cargo-fel4:
 
-```
-$ cd my-project/
+```bash
+cd my-project/
 
-$ cargo fel4 simulate
+cargo fel4 simulate
 ```
 
 #### Deploy a feL4 Project
 
 To deploy a feL4 project on to the target platform using cargo-fel4:
 
-```
-$ cd my-project/
+```bash
+cd my-project/
 
-$ cargo fel4 deploy
+cargo fel4 deploy
 ```
 
 #### Running Tests
@@ -191,20 +224,20 @@ cargo-fel4 will generate a basic set of property tests when creating a new proje
 
 Build a feL4 test application:
 
-```
-$ cargo fel4 test build
+```bash
+cargo fel4 test build
 ```
 
 Simulate a feL4 test application:
 
-```
-$ cargo fel4 test simulate
+```bash
+cargo fel4 test simulate
 ```
 
 Deploy a feL4 test application:
 
-```
-$ cargo fel4 test deploy
+```bash
+cargo fel4 test deploy
 ```
 
 #### Configuration
@@ -237,17 +270,17 @@ specified by the `artifact-path` property.
 Target specification files available to cargo-fel4 are located in the directory
 specified by the `target-specs-path` property.
 
-```
-$ cargo fel4 new my-project
+```bash
+cargo fel4 new my-project
 
 # The fel4.toml is generated at the project's root directory
-$ my-new-project/fel4.toml
+my-new-project/fel4.toml
 
 # Output artifacts produced by the build
-$ my-new-project/artifacts/
+my-new-project/artifacts/
 
 # Rust target specifications available to cargo-fel4
-$ my-new-project/target_specs/
+my-new-project/target_specs/
 ```
 
 See the [fel4-config](https://github.com/PolySync/fel4-config) and
@@ -282,7 +315,7 @@ U-boot command prompt.
 
 Then at the U-boot command prompt, enter the following:
 
-```
+```bash
 setenv dfu_alt_info "kernel ram 0x83000000 0x1000000"
 setenv bootcmd_dfu "dfu 0 ram 0; go 0x83000000"
 saveenv
@@ -290,7 +323,7 @@ saveenv
 
 To make U-boot enter its DFU server mode, type:
 
-```
+```bash
 run bootcmd_dfu
 ```
 
@@ -298,8 +331,8 @@ U-boot will wait until an image has been uploaded.
 
 You can now deploy a cargo-fel4 application image from the host machine:
 
-```
-$ cargo fel4 deploy
+```bash
+cargo fel4 deploy
 ```
 
 # License
