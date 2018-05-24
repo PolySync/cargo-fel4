@@ -11,7 +11,7 @@ static LOGGER: Logger = Logger;
 
 fn main() {
     if let Err(e) = log::set_logger(&LOGGER) {
-        error!("there was an error initializing the logger:\n{}", e);
+        error!("There was an error initializing the logger:\n{}", e);
         return;
     };
     let CargoFel4Cli::Fel4SubCmd(subcmd) = CargoFel4Cli::from_args();
@@ -20,31 +20,31 @@ fn main() {
         Fel4SubCmd::BuildCmd(c) => {
             set_logging_level(&c.loudness);
             if let Err(e) = cargo_fel4::handle_build_cmd(&c) {
-                error!("failed to run the build command\n{}", e)
+                error!("Failed to run the build command\n{}", e)
             }
         }
         Fel4SubCmd::SimulateCmd(c) => {
             set_logging_level(&c.loudness);
             if let Err(e) = cargo_fel4::handle_simulate_cmd(&c) {
-                error!("failed to run the simulation command\n{}", e)
+                error!("Failed to run the simulation command\n{}", e)
             }
         }
         Fel4SubCmd::NewCmd(c) => {
             set_logging_level(&c.loudness);
             if let Err(e) = cargo_fel4::handle_new_cmd(&c) {
-                error!("failed to run the new command\n{}", e)
+                error!("Failed to run the new command\n{}", e)
             }
         }
         Fel4SubCmd::TestCmd(c) => {
             set_logging_level(&c.loudness);
             if let Err(e) = cargo_fel4::handle_test_cmd(&c) {
-                error!("failed to run the test command\n{}", e)
+                error!("Failed to run the test command\n{}", e)
             }
         }
         Fel4SubCmd::CleanCmd(c) => {
             set_logging_level(&c.loudness);
             if let Err(e) = cargo_fel4::handle_clean_cmd(&c) {
-                error!("failed to run the clean command\n{}", e)
+                error!("Failed to run the clean command\n{}", e)
             }
         }
     }

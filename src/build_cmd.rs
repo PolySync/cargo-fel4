@@ -110,6 +110,20 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
             // won't trigger a rebuild (as it would if we were to move it)
             fs::copy(&kernel_path, &sysimg_path)?;
         }
+        SupportedTarget::Aarch64Sel4Fel4 => {
+            construct_libsel4_build_command(subcmd, &config, &cross_layer_locations)
+                .env(
+                    "FEL4_ROOT_TASK_IMAGE_PATH",
+                    target_build_cache_path.join("root-task"),
+                )
+                .env("RUSTFLAGS", &rustflags_env_var)
+                .run_cmd()?;
+
+            // seL4 CMake rules will just output everything to `kernel`
+            // we copy it so it's consistent with our image name but
+            // won't trigger a rebuild (as it would if we were to move it)
+            fs::copy(&kernel_path, &sysimg_path)?;
+        }
         _ => {
             fs::copy(target_build_cache_path.join("root-task"), &sysimg_path)?;
         }
@@ -150,19 +164,19 @@ pub fn handle_build_cmd(subcmd: &BuildCmd) -> Result<(), Error> {
 
     if !sysimg_path.exists() {
         return Err(Error::ConfigError(format!(
-            "something went wrong with the build, cannot find the system image '{}'",
+            "Something went wrong with the build, cannot find the system image '{}'",
             target_build_cache_path.join(&sysimg_path).display()
         )));
     }
 
     if !kernel_path.exists() {
         return Err(Error::ConfigError(format!(
-            "something went wrong with the build, cannot find the kernel file '{}'",
+            "Something went wrong with the build, cannot find the kernel file '{}'",
             kernel_path.display()
         )));
     }
 
-    info!("output artifact path '{}'", artifact_path.display());
+    info!("Output artifact path '{}'", artifact_path.display());
 
     info!("kernel: '{}'", kernel_path.display());
     info!("feL4img: '{}'", sysimg_path.display());
@@ -292,6 +306,9 @@ impl BuildCommandExt for Command {
         match *target {
             SupportedTarget::Armv7Sel4Fel4 => {
                 self.env("CC_armv7-sel4-fel4", "arm-linux-gnueabihf-gcc")
+            }
+            SupportedTarget::Aarch64Sel4Fel4 => {
+                self.env("CC_aarch64-sel4-fel4", "aarch64-linux-gnu-gcc")
             }
             _ => self,
         }

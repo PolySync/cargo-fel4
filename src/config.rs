@@ -173,6 +173,7 @@ pub enum Arch {
     X86,
     X86_64,
     Armv7,
+    Aarch64,
 }
 
 impl<'a> From<&'a SupportedTarget> for Arch {
@@ -180,6 +181,7 @@ impl<'a> From<&'a SupportedTarget> for Arch {
         match *target {
             SupportedTarget::X8664Sel4Fel4 => Arch::X86_64,
             SupportedTarget::Armv7Sel4Fel4 => Arch::Armv7,
+            SupportedTarget::Aarch64Sel4Fel4 => Arch::Aarch64,
         }
     }
 }

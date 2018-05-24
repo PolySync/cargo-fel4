@@ -6,6 +6,7 @@ use cmake_config::SimpleFlag;
 use config::Arch;
 
 const ARMV7_ASM: &str = include_str!("asm/arm.s");
+const AARCH64_ASM: &str = include_str!("asm/aarch64.s");
 const X86_ASM: &str = include_str!("asm/x86.s");
 const X86_64_ASM: &str = include_str!("asm/x86_64.s");
 
@@ -91,6 +92,7 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
             Arch::X86 => X86_ASM,
             Arch::X86_64 => X86_64_ASM,
             Arch::Armv7 => ARMV7_ASM,
+            Arch::Aarch64 => AARCH64_ASM,
         };
         writeln!(self.writer, "\nglobal_asm!(r###\"{}\"###);\n", asm)?;
         Ok(())
@@ -177,6 +179,17 @@ fn main() {
                 writeln!(self.writer, "    regs.rsp = stack_top as seL4_Word;")?;
             }
             Arch::Armv7 => {
+                writeln!(
+                    self.writer,
+                    "    #[cfg(feature = \"test\")]
+    {{ regs.pc = {}::fel4_test::run as seL4_Word; }}
+    #[cfg(not(feature = \"test\"))]
+    {{ regs.pc = {}::run as seL4_Word; }}",
+                    self.package_module_name, self.package_module_name
+                )?;
+                writeln!(self.writer, "    regs.sp = stack_top as seL4_Word;")?;
+            }
+            Arch::Aarch64 => {
                 writeln!(
                     self.writer,
                     "    #[cfg(feature = \"test\")]

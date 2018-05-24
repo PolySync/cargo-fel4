@@ -7,10 +7,10 @@
  * notice may not be copied, modified, or distributed except
  * according to those terms.
  */
-    .global _sel4_start
-    .global _start
-    .global _stack_bottom
-    .text
+.global _sel4_start
+.global _start
+.global _stack_bottom
+.text
 
 _start:
 _sel4_start:
