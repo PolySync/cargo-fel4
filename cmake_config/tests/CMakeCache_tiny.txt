@@ -1,0 +1,12 @@
+# Hash comment ought to be ignored
+// Slash comment ought to be ignored
+
+FP_PROP:FILEPATH=/home/whoever/wherever
+
+S_PROP_SOME:STRING=foo
+S_PROP_NONE:STRING=
+
+B_PROP_ON:BOOL=ON
+B_PROP_OFF:BOOL=OFF
+B_PROP_TRUE:BOOL=TRUE
+B_PROP_FALSE:BOOL=FALSE

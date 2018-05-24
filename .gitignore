@@ -1,2 +1,5 @@
+.idea
 /target/
+/cmake_config/target
 **/*.rs.bk
+*.swp
