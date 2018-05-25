@@ -145,7 +145,7 @@ See the output of `cargo fel4 --help` for more details.
 ```bash
 cargo fel4 --help
 
-Build, manage and simulate feL4 system images
+A cargo subcommand for automating feL4 (seL4 for Rust) development
 
 USAGE:
     cargo fel4 <SUBCOMMAND>
