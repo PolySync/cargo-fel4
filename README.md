@@ -283,6 +283,15 @@ my-new-project/artifacts/
 my-new-project/target_specs/
 ```
 
+It is advisable to clean the build cache when changing either the Rust target triple or
+the platform configuration.
+
+This can be done with cargo-fel4:
+
+```bash
+cargo fel4 clean
+```
+
 See the [fel4-config](https://github.com/PolySync/fel4-config) and
 [libsel4-sys](https://github.com/PolySync/libsel4-sys) packages for more configuration information.
 
