@@ -12,7 +12,7 @@ use super::Error;
 #[derive(Debug, Clone, StructOpt)]
 #[structopt(bin_name = "cargo")]
 pub enum CargoFel4Cli {
-    #[structopt(name = "fel4", about = "Build, manage and simulate feL4 system images")]
+    #[structopt(name = "fel4", about = "A cargo subcommand for automating feL4 (seL4 for Rust) development")]
     Fel4SubCmd(Fel4SubCmd),
 }
 
