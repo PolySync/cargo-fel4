@@ -140,4 +140,6 @@ fn halt() {
     unsafe { seL4_DebugHalt() };
 }
 #[cfg(not(feature = "KernelDebugBuild"))]
-fn halt() {}
+fn halt() {
+    panic!("Halting");
+}
