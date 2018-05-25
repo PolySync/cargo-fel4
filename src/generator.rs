@@ -63,13 +63,8 @@ pub mod sel4_config {\n",
         self.writer
             .write_all(BOOT_INFO_AND_LANG_ITEM_CODE.as_bytes())?;
 
-        writeln!(self.writer, r####"#[cfg(feature = "KernelDebugBuild")]"####)?;
         self.writer.write_all(
-            b"#[inline(always)]
-pub fn debug_halt() {
-    unsafe { sel4_sys::seL4_DebugHalt() };
-}
-
+            b"
 fn get_untyped(info: &seL4_BootInfo, size_bytes: usize) -> Option<seL4_CPtr> {
     let mut idx = 0;
     for i in info.untyped.start..info.untyped.end {
@@ -143,9 +138,9 @@ fn main() {
             1,
         )
     };
-    if retype_err != 0 {
-        debug_halt();
-    }
+
+    assert!(retype_err == 0, \"Failed to retype untyped memory\");
+
     let tcb_err: seL4_Error = unsafe {
         seL4_TCB_Configure(
             tcb_cap,
@@ -158,9 +153,9 @@ fn main() {
             0,
         )
     };
-    if tcb_err != 0 {
-        debug_halt();
-    }
+
+    assert!(tcb_err == 0, \"Failed to configure TCB\");
+
     let stack_base = unsafe { CHILD_STACK as usize };
     let stack_top = stack_base + CHILD_STACK_SIZE;
     let mut regs: seL4_UserContext = unsafe { mem::zeroed() };\n",
