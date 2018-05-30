@@ -27,77 +27,49 @@ tests in the feL4 context. Try it out with `cargo fel4 test build && cargo fel4 
 ### Dependencies
 
 `cargo-fel4` works on top of several other tools to operate, so you'll need Rust with Cargo, Xargo,
-and QEMU to build and run feL4 projects, plus several system dependencies pulled in transitively through libsel4-sys.
-cargo-fel4 was developed using Ubuntu Xenial, but other Linux versions should work.
+and QEMU to build and run feL4 projects. Additionally, feL4 depends on the [libsel4-sys](https://github.com/PolySync/libsel4-sys) crate, which has its own set of dependencies. Some of the "Building" steps below are actually specific to satisfying `libsel4-sys` dependencies. `cargo-fel4` was developed using Ubuntu Xenial, but other Linux variants should work.
 
-* [libsel4-sys](https://github.com/PolySync/libsel4-sys/blob/devel/README.md#Dependencies)
-  
-  While libsel4-sys is a Rust project, it has nontrivial
-  dependencies of its own in order to build.
-  
-  See [the libsel4-sys README](https://github.com/PolySync/libsel4-sys/blob/devel/README.md#Dependencies) for more
-  assistance in setting up those transitive dependencies.
-* [Cross Compiler Toolchains](https://gcc.gnu.org/)
-  ```bash
-  # Used by the armv7-sel4-fel4 target
-  sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
-  
-  # Used by the aarch64-sel4-fel4 target
-  sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-  ```
-* [Rust Nightly](https://github.com/rust-lang-nursery/rustup.rs)
-  ```bash
-  # Download the rustup install script
-  wget https://static.rust-lang.org/rustup/rustup-init.sh
-  
-  # Install rustup
-  chmod +x rustup-init.sh
-  sh rustup-init.sh
-  
-  rustup install nightly
-  ```
-* [xargo](https://github.com/japaric/xargo)
-  ```bash
-  # Xargo requires rust-src component
-  rustup component add rust-src
-  
-  # Install Xargo
-  cargo install xargo
-  ```
-* [qemu](https://www.qemu.org/)
-  
-  Present to assist in simulation and testing.
-  
-  ```bash
-  sudo apt-get install qemu-system-x86
-  sudo apt-get install qemu-system-arm
-  ```
-* [dfu-util](http://dfu-util.sourceforge.net/)
-  
-  dfu-util is used if you intend on deploying to a device via USB.
-  
-  ```bash
-  sudo apt-get install dfu-util
-  ```
-
+* [rust](https://github.com/rust-lang-nursery/rustup.rs) (nightly)
+* [xargo](https://github.com/japaric/xargo) (for cross-compiling)
+* [gcc/g++ cross compilers](https://gcc.gnu.org/) (for ARM targets)
+* [qemu](https://www.qemu.org/) (for simulation)
+* [dfu-util](http://dfu-util.sourceforge.net/) (for device deployment)
 
 ### Building
 
-If you intend on developing `cargo-fel4`, a build is as simple
-as running `cargo build` after getting the repo and installing
-dependencies.
+These instructions cover installing both `libsel4-sys` and `cargo-fel4` dependencies as well as building `cargo-fel4`.
 
-```bash
-cargo build
-```
+* Install system package dependencies:
+  ```bash
+  sudo apt-get install python-pip ninja-build libxml2-utils dfu-util curl
+  sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+  sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+  sudo apt-get install qemu-system-x86 qemu-system-arm
+  ```
+* Install pip package dependencies:
+  ```bash
+  sudo pip install cmake sel4-deps
+  ```
+* Install Rust nightly and additional components:
+  ```bash
+  curl https://sh.rustup.rs -sSf | sh
+  rustup install nightly
+  rustup component add rust-src
+  cargo install xargo
+  ```
+* Building `cargo-fel4`:
+  ```bash
+  cargo build
+  ```
 
 ### Installation
 
-cargo-fel4 can be installed with `cargo install`.
+After building, `cargo-fel4` can be installed with `cargo install`.
 
-```bash
-cargo +nightly install --git https://github.com/PolySync/cargo-fel4.git
-```
+* Install under the nightly toolchain:
+  ```bash
+  cargo +nightly install --git https://github.com/PolySync/cargo-fel4.git
+  ```
 
 ## Usage
 
@@ -323,4 +295,3 @@ cargo test
 * Dan Pittman [email](mailto:dpittman@polysync.io)
 
 Please see the [LICENSE](./LICENSE) file for more details
-
