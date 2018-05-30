@@ -1,4 +1,4 @@
-libsel4-sys = {git = "ssh://github.com/PolySync/libsel4-sys.git", branch = "devel"}
+libsel4-sys = {git = "https://github.com/PolySync/libsel4-sys.git", branch = "master"}
 
 [dependencies.wee_alloc]
 version = "0.4"
