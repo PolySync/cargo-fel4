@@ -1,0 +1,82 @@
+# -!!-<!-- Project Name -->
+
+## Overview
+
+-!!-
+
+-""-
+
+## Getting Started
+
+### Dependencies
+
+-??-
+
+* -??-
+* [-!!-](-!!-) -??-
+* -""-
+
+### Building
+
+-!!-<!-- Short Explanation -->
+
+* -!!-<!-- Build Step Explanation -->
+  ```-??-
+  ```
+* -""-
+
+### Installation
+
+-!!-<!-- Short Explanation -->
+
+* -!!-<!-- Installation Step Explanation -->
+  ```-??-
+  ```
+* -""-
+
+## Usage
+
+-!!-<!-- Usage prose explanation -->
+
+-""-
+
+```-!!-<!-- At least one code example -->
+```
+
+* -??-<!-- Arbitrary extra usage explanation -->
+
+### Examples
+
+-??-
+
+-""-
+
+* -!!-
+* -""-
+
+## Tests
+
+-!!-<!-- Short Explanation -->
+
+### Building
+
+-!!-<!-- Short Explanation -->
+
+```-??-
+```
+
+### Running
+
+-!!-<!-- Short Explanation -->
+
+```-??-
+```
+
+# License
+
+© 2018, PolySync Technologies, Inc.
+
+* -!!- [-!!-](mailto:-!!-@-!!-)
+* -""-
+
+Please see the [LICENSE](./LICENSE) file for more details

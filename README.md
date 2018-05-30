@@ -1,17 +1,13 @@
 # cargo-fel4
 
-```
-A cargo subcommand for automating feL4 (seL4 for Rust) development
-```
-
 ## Overview
+
+A cargo subcommand for automating feL4 (seL4 for Rust) development
 
 `cargo-fel4` seeks to accelerate the pace of Rust development for seL4 environments
 by automating away the annoyances of building the underlying seL4 codebase,
 generating useable Rust bindings, and providing a way to get your code
 into a runnable seL4 application.
-
-## Getting Started
 
 Once installed, use `cargo fel4 new my-project` to create a new feL4 project, which is a regular
 Rust `no_std` library project with a few additional configuration frills.
@@ -26,117 +22,54 @@ feL4 project settings, stored in your project's `fel4.toml` manifest file.
 feL4 projects come with a example [property-based](https://github.com/AltSysrq/proptest) test suite to demonstrate how to conduct
 tests in the feL4 context. Try it out with `cargo fel4 test build && cargo fel4 test simulate`
 
+## Getting Started
+
 ### Dependencies
 
 `cargo-fel4` works on top of several other tools to operate, so you'll need Rust with Cargo, Xargo,
-CMake, Ninja, and QEMU to build and run feL4 projects.
+and QEMU to build and run feL4 projects. Additionally, feL4 depends on the [libsel4-sys](https://github.com/PolySync/libsel4-sys) crate, which has its own set of dependencies. Some of the "Building" steps below are actually specific to satisfying `libsel4-sys` dependencies. `cargo-fel4` was developed using Ubuntu Xenial, but other Linux variants should work.
 
-#### Linux
+* [rust](https://github.com/rust-lang-nursery/rustup.rs) (nightly)
+* [xargo](https://github.com/japaric/xargo) (for cross-compiling)
+* [gcc/g++ cross compilers](https://gcc.gnu.org/) (for ARM targets)
+* [qemu](https://www.qemu.org/) (for simulation)
+* [dfu-util](http://dfu-util.sourceforge.net/) (for device deployment)
 
-cargo-fel4 was developed using Ubuntu Xenial, but other Linux versions should work.
+### Building
 
-#### QEMU
+These instructions cover installing both `libsel4-sys` and `cargo-fel4` dependencies as well as building `cargo-fel4`.
 
-```bash
-sudo apt-get install qemu-system-x86
+* Install system package dependencies:
+  ```bash
+  sudo apt-get install python-pip ninja-build libxml2-utils dfu-util curl
+  sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+  sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+  sudo apt-get install qemu-system-x86 qemu-system-arm
+  ```
+* Install pip package dependencies:
+  ```bash
+  sudo pip install cmake sel4-deps
+  ```
+* Install Rust nightly and additional components:
+  ```bash
+  curl https://sh.rustup.rs -sSf | sh
+  rustup install nightly
+  rustup component add rust-src
+  cargo install xargo
+  ```
+* Building `cargo-fel4`:
+  ```bash
+  cargo build
+  ```
 
-sudo apt-get install qemu-system-arm
-```
+### Installation
 
-#### DFU USB Programmer
+After building, `cargo-fel4` can be installed with `cargo install`.
 
-```bash
-sudo apt-get install dfu-util
-```
-
-#### CMake
-
-CMake version `3.7.2` or greater is required due to the seL4 build system.
-
-Binary releases are available from [cmake.org](https://cmake.org/download/).
-
-An example workflow for a recent binary installation on Ubuntu
-[can be found on StackExchange's askUbuntu](https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line/865294#865294).
-
-#### Ninja
-
-Ninja version `1.7.1` or greater is required or greater is required due to the seL4 build system.
-
-Binary releases are available from [github](https://github.com/ninja-build/ninja/releases).
-
-Ubuntu users can typically install ninja using apt-get.
-
-```bash
-sudo apt-get install ninja-build
-```
-
-#### Python Tooling
-
-The underlying seL4 build system also makes use of some Python tools.
-
-```bash
-# Install python and pip, if you don't have them already
-sudo apt-get install python-pip
-
-pip install sel4-deps
-```
-
-#### seL4 Tooling
-
-The underlying seL4 build system also requires `xmlint`.
-
-```bash
-sudo apt-get install libxml2-utils
-```
-
-#### Cross Compiler Toolchains
-
-```bash
-# Used by the armv7-sel4-fel4 target
-sudo apt-get install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
-
-# Used by the aarch64-sel4-fel4 target
-sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-```
-
-#### rustup
-
-```bash
-# Download the install script
-wget https://static.rust-lang.org/rustup/rustup-init.sh
-
-# Install rustup
-chmod +x rustup-init.sh
-sh rustup-init.sh
-```
-
-#### Nightly Rust
-
-```bash
-rustup install nightly
-```
-
-#### Xargo
-
-```bash
-# Xargo requires rust-src component
-rustup component add rust-src
-
-# Install Xargo
-cargo install xargo
-```
-
-## Building
-
-cargo-fel4 can be built and installed with `cargo install`:
-
-```bash
-cargo +nightly install --git https://github.com/PolySync/cargo-fel4.git
-```
-
-If you intend on developing `cargo-fel4`, a build is as simple
-as running `cargo build` after getting the repo and installing
-dependencies.
+* Install under the nightly toolchain:
+  ```bash
+  cargo +nightly install --git https://github.com/PolySync/cargo-fel4.git
+  ```
 
 ## Usage
 
@@ -145,7 +78,7 @@ See the output of `cargo fel4 --help` for more details.
 ```bash
 cargo fel4 --help
 
-Build, manage and simulate feL4 system images
+A cargo subcommand for automating feL4 (seL4 for Rust) development
 
 USAGE:
     cargo fel4 <SUBCOMMAND>
@@ -166,180 +99,199 @@ SUBCOMMANDS:
 
 ### Examples
 
-#### Create a New feL4 Project
+* #### Create a New feL4 Project
 
-To create a new project using cargo-fel4:
+  To create a new project using cargo-fel4:
 
-```bash
-cargo fel4 new my-project
-    Created library `my-project` project
+  ```bash
+  cargo fel4 new my-project
+      Created library `my-project` project
 
-$ tree my-project/
-my-project/
-├── Cargo.toml
-├── fel4.toml
-├── src
-│   ├── fel4_test.rs
-│   └── lib.rs
-├── target_specs
-│   ├── armv7-sel4-fel4.json
-│   ├── README.md
-│   └── x86_64-sel4-fel4.json
-└── Xargo.toml
-```
+  $ tree my-project/
+  my-project/
+  ├── Cargo.toml
+  ├── fel4.toml
+  ├── src
+  │   ├── fel4_test.rs
+  │   └── lib.rs
+  ├── target_specs
+  │   ├── armv7-sel4-fel4.json
+  │   ├── README.md
+  │   └── x86_64-sel4-fel4.json
+  └── Xargo.toml
+  ```
 
-#### Build a feL4 Project
+* #### Build a feL4 Project
 
-To build a feL4 project using cargo-fel4:
+  To build a feL4 project using cargo-fel4:
 
-```bash
-cd my-project/
+  ```bash
+  cd my-project/
 
-cargo fel4 build
-```
+  cargo fel4 build
+  ```
 
-#### Simulate a feL4 Project
+* #### Simulate a feL4 Project
 
-To simulate a feL4 project with QEMU via cargo-fel4:
+  To simulate a feL4 project with QEMU via cargo-fel4:
 
-```bash
-cd my-project/
+  ```bash
+  cd my-project/
 
-cargo fel4 simulate
-```
+  cargo fel4 simulate
+  ```
 
-#### Deploy a feL4 Project
+* #### Deploy a feL4 Project
 
-To deploy a feL4 project on to the target platform using cargo-fel4:
+  To deploy a feL4 project on to the target platform using cargo-fel4:
 
-```bash
-cd my-project/
+  ```bash
+  cd my-project/
 
-cargo fel4 deploy
-```
+  cargo fel4 deploy
+  ```
 
-#### Running Tests
+* #### Running Tests
 
-cargo-fel4 will generate a basic set of property tests when creating a new project.
+  cargo-fel4 will generate a basic set of property tests when creating a new project.
 
-Build a feL4 test application:
+  ```bash
+  cargo fel4 test
+  ```
 
-```bash
-cargo fel4 test build
-```
+  ##### Just build a feL4 test application:
 
-Simulate a feL4 test application:
+  ```bash
+  cargo fel4 test build
+  ```
 
-```bash
-cargo fel4 test simulate
-```
+  ##### Simulate a previously-built feL4 test application:
 
-Deploy a feL4 test application:
+  ```bash
+  cargo fel4 test simulate
+  ```
 
-```bash
-cargo fel4 test deploy
-```
+  ##### Deploy a feL4 test application:
 
-#### Configuration
+  ```bash
+  cargo fel4 test deploy
+  ```
+* #### DFU Deployment on the TX1 Platform
 
-cargo-fel4 is configured through a `fel4.toml` manifest file.
+  To deploy a feL4 application via DFU, be sure to have a serial connection set up in order to
+  interact with the U-Boot boot loader.
 
-The manifest file is responsible for prescribing a high-level configuration for cargo-fel4
-infrastructure, as well as the underlying `libsel4-sys` package CMake build system.
+  Attach the USB-mini end of a USB cable to the USB-mini port on the TX1.
+  Then plug in the power supply for the TX1 and power it on.
 
-Boolean properties specified in the `fel4.toml` are applied as Rust features
-to feL4 projects during `cargo fel4 build`, so it's possible to
-do compile-time configuration to account for variations in available seL4 options.
+  Once the TX1 is powered on, watch the serial output so you can stop the boot process at the
+  U-boot command prompt.
 
-The `fel4.toml` manifest resides in the project's root directory, and contains several properties
-related to the location of input/output artifacts.
-These path properties are relative to project's root directory.
+  Then at the U-boot command prompt, enter the following:
 
-For example, a newly generated feL4 project contains the following in `fel4.toml`:
+  ```bash
+  setenv dfu_alt_info "kernel ram 0x83000000 0x1000000"
+  setenv bootcmd_dfu "dfu 0 ram 0; go 0x83000000"
+  saveenv
+  ```
 
-```
-[fel4]
-artifact-path = "artifacts"
-target-specs-path = "target_specs"
-...
-```
+  To make U-boot enter its DFU server mode, type:
 
-Output artifacts produced during a cargo-fel4 build will be placed in the directory
-specified by the `artifact-path` property.
+  ```bash
+  run bootcmd_dfu
+  ```
 
-Target specification files available to cargo-fel4 are located in the directory
-specified by the `target-specs-path` property.
+  U-boot will wait until an image has been uploaded.
 
-```bash
-cargo fel4 new my-project
+  You can now deploy a cargo-fel4 application image from the host machine:
 
-# The fel4.toml is generated at the project's root directory
-my-new-project/fel4.toml
+  ```bash
+  cargo fel4 deploy
+  ```
+* #### Configuration
 
-# Output artifacts produced by the build
-my-new-project/artifacts/
+  cargo-fel4 is configured through a `fel4.toml` manifest file.
 
-# Rust target specifications available to cargo-fel4
-my-new-project/target_specs/
-```
+  The manifest file is responsible for prescribing a high-level configuration for cargo-fel4
+  infrastructure, as well as the underlying `libsel4-sys` package CMake build system.
 
-See the [fel4-config](https://github.com/PolySync/fel4-config) and
-[libsel4-sys](https://github.com/PolySync/libsel4-sys) packages for more configuration information.
+  Boolean properties specified in the `fel4.toml` are applied as Rust features
+  to feL4 projects during `cargo fel4 build`, so it's possible to
+  do compile-time configuration to account for variations in available seL4 options.
 
-See the target specifications [README](target_specs/README.md) for more information about
-the specifications shipped with cargo-fel4.
+  The `fel4.toml` manifest resides in the project's root directory, and contains several properties
+  related to the location of input/output artifacts.
+  These path properties are relative to project's root directory.
+
+  For example, a newly generated feL4 project contains the following in `fel4.toml`:
+
+  ```
+  [fel4]
+  artifact-path = "artifacts"
+  target-specs-path = "target_specs"
+  ...
+  ```
+
+  Output artifacts produced during a cargo-fel4 build will be placed in the directory
+  specified by the `artifact-path` property.
+
+  Target specification files available to cargo-fel4 are located in the directory
+  specified by the `target-specs-path` property.
+
+  ```bash
+  cargo fel4 new my-project
+
+  # The fel4.toml is generated at the project's root directory
+  my-new-project/fel4.toml
+
+  # Output artifacts produced by the build
+  my-new-project/artifacts/
+
+  # Rust target specifications available to cargo-fel4
+  my-new-project/target_specs/
+  ```
+
+  It is advisable to clean the build cache when changing either the Rust target triple or
+  the platform configuration.  This can be done with cargo-fel4:
+
+  ```bash
+  cargo fel4 clean
+  ```
+
+  See the [fel4-config](https://github.com/PolySync/fel4-config) and
+  [libsel4-sys](https://github.com/PolySync/libsel4-sys) packages for more configuration information.
+
+  See the target specifications [README](target_specs/README.md) for more information about
+  the specifications shipped with cargo-fel4.
 
 ## Tests
 
-### Test Dependencies
+`cargo-fel4` manages its own tests with the standard Rust test framework, plus `proptest`
+for property-based testing.
 
-The tests for `cargo-fel4` (as opposed to the tests within a given feL4 project)
-requires installing the standard dependencies listed earlier.
+### Building
 
-
-### Running Tests
-`cargo-fel4`'s internal tests can be exercised by running `cargo test`
-
-## Deployment
-
-### DFU Deployment on the TX1 Platform
-
-To deploy a feL4 application via DFU, be sure to have a serial connection set up in order to
-interact with the U-Boot boot loader.
-
-Attach the USB-mini end of a USB cable to the USB-mini port on the TX1.
-Then plug in the power supply for the TX1 and power it on.
-
-Once the TX1 is powered on, watch the serial output so you can stop the boot process at the
-U-boot command prompt.
-
-Then at the U-boot command prompt, enter the following:
+Building the tests is as simple as:
 
 ```bash
-setenv dfu_alt_info "kernel ram 0x83000000 0x1000000"
-setenv bootcmd_dfu "dfu 0 ram 0; go 0x83000000"
-saveenv
+cargo build --tests
 ```
 
-To make U-boot enter its DFU server mode, type:
+### Running
+
+Running the tests for `cargo-fel4` (as opposed to the tests within a given feL4 project)
+requires installing the standard dependencies listed earlier. `cargo-fel4`'s internal tests can be exercised by running:
 
 ```bash
-run bootcmd_dfu
-```
-
-U-boot will wait until an image has been uploaded.
-
-You can now deploy a cargo-fel4 application image from the host machine:
-
-```bash
-cargo fel4 deploy
+cargo test
 ```
 
 # License
 
-cargo-fel4 is released under the MIT license, with additional thanks and attribution to the following:
+© 2018, PolySync Technologies, Inc.
 
-* [Robigalia](https://gitlab.com/robigalia/sel4-start/blob/master/LICENSE-MIT), MIT License
-* [seL4](https://github.com/seL4/seL4/blob/master/LICENSE_BSD2.txt), BSD 2-Clause License
+* Jon Lamb [email](mailto:jlamb@polysync.io)
+* Zack Pierce [email](mailto:zpierce@polysync.io)
+* Dan Pittman [email](mailto:dpittman@polysync.io)
 
-Please see the [LICENSE](LICENSE) file for more details.
+Please see the [LICENSE](./LICENSE) file for more details
