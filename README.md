@@ -30,7 +30,7 @@ tests in the feL4 context. Try it out with `cargo fel4 test build && cargo fel4 
 and QEMU to build and run feL4 projects. Additionally, feL4 depends on the [libsel4-sys](https://github.com/PolySync/libsel4-sys) crate, which has its own set of dependencies. Some of the "Building" steps below are actually specific to satisfying `libsel4-sys` dependencies. `cargo-fel4` was developed using Ubuntu Xenial, but other Linux variants should work.
 
 * [rust](https://github.com/rust-lang-nursery/rustup.rs) (nightly)
-* [xargo](https://github.com/japaric/xargo)
+* [xargo](https://github.com/japaric/xargo) (for cross-compiling)
 * [gcc/g++ cross compilers](https://gcc.gnu.org/) (for ARM targets)
 * [qemu](https://www.qemu.org/) (for simulation)
 * [dfu-util](http://dfu-util.sourceforge.net/) (for device deployment)
