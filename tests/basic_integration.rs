@@ -91,7 +91,7 @@ sequential_test! {
                 quiet: false,
             },
             release: false,
-            subcmd: cargo_fel4::TestSubCmd::Build,
+            subcmd: Some(cargo_fel4::TestSubCmd::Build),
             cargo_manifest_path: target_cargo_manifest.clone(),
         }).expect("Could not run handle_test_command");
         assert!(&target_dir.join("artifacts/test/debug/simulate").is_file());
@@ -172,7 +172,7 @@ sequential_test! {
                 quiet: false,
             },
             release: false,
-            subcmd: cargo_fel4::TestSubCmd::Build,
+            subcmd: Some(cargo_fel4::TestSubCmd::Build),
             cargo_manifest_path: target_cargo_manifest.clone(),
         }).expect("Could not run handle_test_command");
         assert!(&target_dir.join("artifacts/test/debug/simulate").is_file());

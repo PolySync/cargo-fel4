@@ -114,7 +114,7 @@ pub struct TestCmd {
     #[structopt(name = "release", long = "release", help = "Build artifacts in release mode")]
     pub release: bool,
     #[structopt(subcommand)]
-    pub subcmd: TestSubCmd,
+    pub subcmd: Option<TestSubCmd>,
     #[structopt(
         name = "cargo-manifest-path",
         long = "manifest-path",
