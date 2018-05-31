@@ -1,6 +1,6 @@
 [package]
 name = "cargo-fel4"
-version = "0.0.1"
+version = "0.7.0"
 publish = false
 authors = ["Jon Lamb <jlamb@polysync.io>", "Zachary Pierce <zpierce@polysync.io>", "Dan Pittman <dpittman@polysync.io>"]
 
