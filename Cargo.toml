@@ -1,6 +1,6 @@
 [package]
 name = "cargo-fel4"
-version = "0.0.1"
+version = "0.7.0"
 publish = false
 authors = ["Jon Lamb <jlamb@polysync.io>", "Zachary Pierce <zpierce@polysync.io>", "Dan Pittman <dpittman@polysync.io>"]
 
@@ -8,7 +8,7 @@ authors = ["Jon Lamb <jlamb@polysync.io>", "Zachary Pierce <zpierce@polysync.io>
 cargo_metadata = "0.5"
 cmake_config = { version = "*", path = "cmake_config" }
 colored = "1.6"
-fel4-config = { git = "ssh://github.com/PolySync/fel4-config.git", branch = "master" }
+fel4-config = { git = "https://github.com/PolySync/fel4-config.git", branch = "master" }
 log = "0.4"
 structopt = "0.2"
 
