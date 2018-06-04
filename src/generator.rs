@@ -41,6 +41,8 @@ impl<'a, 'b, 'c, W: Write> Generator<'a, 'b, 'c, W> {
 
         self.writer.write_all(
             b"
+use core::intrinsics;
+use core::panic::PanicInfo;
 use core::mem;
 use sel4_sys::*;\n\n",
         )?;
@@ -102,7 +104,9 @@ static mut CHILD_STACK: *const [u64; CHILD_STACK_SIZE] =
 #![cfg_attr(feature = \"alloc\", feature(alloc))]
 #![feature(lang_items, core_intrinsics)]
 #![feature(global_asm)]
-#![cfg_attr(feature = \"alloc\", feature(global_allocator))]\n\n"
+#![cfg_attr(feature = \"alloc\", feature(global_allocator))]
+#![feature(panic_implementation)]
+#![feature(panic_info_message)]\n\n"
         )?;
 
         self.writer.write_all(b"extern crate sel4_sys;\n")?;
@@ -253,32 +257,38 @@ fn lang_start<T: Termination + 'static>(
     panic!("Root task should never return from main!");
 }
 
-#[lang = "panic_fmt"]
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn panic_fmt(
-    fmt: core::fmt::Arguments,
-    file: &'static str,
-    line: u32,
-) -> ! {
+fn panic(info: &PanicInfo) -> ! {
     #[cfg(feature = "KernelPrinting")]
     {
         use core::fmt::Write;
-        let _ = write!(
-            sel4_sys::DebugOutHandle,
-            "panic at {}:{}: ",
-            file,
-            line
-        );
-        let _ = sel4_sys::DebugOutHandle.write_fmt(fmt);
+
+        if let Some(loc) = info.location() {
+            let _ = write!(
+                sel4_sys::DebugOutHandle,
+                "panic at {}:{}: ",
+                loc.file(),
+                loc.line()
+            );
+        } else {
+            let _ = write!(
+                sel4_sys::DebugOutHandle,
+                "panic: "
+            );
+        }
+
+        if let Some(fmt) = info.message() {
+            let _ = sel4_sys::DebugOutHandle.write_fmt(*fmt);
+        }
         let _ = sel4_sys::DebugOutHandle.write_char('\n');
+
         let _ = write!(
             sel4_sys::DebugOutHandle,
             "----- aborting from panic -----\n"
         );
     }
-    unsafe {
-        core::intrinsics::abort()
-    }
+    unsafe { intrinsics::abort() }
 }
 
 #[lang = "eh_personality"]
