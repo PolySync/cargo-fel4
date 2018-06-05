@@ -22,6 +22,12 @@ feL4 project settings, stored in your project's `fel4.toml` manifest file.
 feL4 projects come with a example [property-based](https://github.com/AltSysrq/proptest) test suite to demonstrate how to conduct
 tests in the feL4 context. Try it out with `cargo fel4 test build && cargo fel4 test simulate`
 
+cargo-fel4 is released with additional special thanks and attribution to
+[Robigalia](https://gitlab.com/robigalia/sel4-start/blob/master/LICENSE-MIT),
+particularly for their startup assembly code and example conventions W.R.T.
+language items, and of course, to Data61, et al for
+[seL4](https://github.com/seL4/seL4/blob/master/LICENSE_BSD2.txt).
+
 ## Getting Started
 
 ### Dependencies
